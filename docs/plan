@@ -1,0 +1,58 @@
+usecases
+- zien dat supermarkten liegen
+	- discrepantie tussen geadverteerde vorige prijs en prijs
+	- historie van prijs inzien
+- vergelijken tussen supermarkten
+	- "Waar kan ik mijn boodschappen het beste halen?"
+	- Boodschappen laten splitsen over meerdere supermarkten
+- watchlist / mailtje krijgen
+	- lijst van meest lompe aanbiedingen
+
+datamodel
+- [supermarkt]
+	- [product]*
+		- naam*
+		- prijs*
+	- [productgroep]
+		- naam
+		- [product]
+	- [aanbieding]*
+		- [product]
+		- constraint
+		- modifier
+
+AH
+	1
+		"AH SuperKruimig JUMMIE"
+		1.00
+
+	2
+		"AH SuperONKruimig JUMMIE"
+		1.00
+	
+	Aardappels
+		1, 2
+
+	Bonus Aardappels week 13
+		Constraint: 3 x (1 | 2)
+		Modifier: goedkoopste 2
+		
+	Bonus Aardappels week 13
+		Constraint: 2 x 2
+		Modifier: -50%
+
+Plan:
+	- Scraper voor AH
+	- Daemon (API + Storage)
+		HTTP-requests
+		- Storage
+			- Update product
+				=> POST /update-product data {product}
+				<= OK
+		- Queries
+			- Prijs voor productnaam
+				=> GET /price-product-fuzzy product=Aardappels
+				<= JSON/XML/MsgPack [AH[{Kruimig, 250g, 1.00}, {Vast, 500g, 2.50}], coop[...], ... ]
+			- Prijsgeschiedenis voor productnaam
+				=> GET /price-history product={AH, Kruimig}
+				<= {AH, Kruimig, [{250g, 2.50}, {300g, 2.50}], etc.
