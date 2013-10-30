@@ -1,3 +1,6 @@
 [submodule "contrib/librusql"]
 	path = contrib/librusql
 	url = git@github.com:Wassasin/librusql
+[submodule "contrib/wubwubcmake"]
+	path = contrib/wubwubcmake
+	url = git@github.com:NickNick/wubwubcmake
