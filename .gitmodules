@@ -1,0 +1,3 @@
+[submodule "contrib/librusql"]
+	path = contrib/librusql
+	url = git@github.com:Wassasin/librusql
