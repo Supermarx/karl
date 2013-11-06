@@ -3,9 +3,12 @@
 #include <supermarx/product.hpp>
 
 int main(){
-	supermarx::karl::do_stuff();
-
-	supermarx::Karl karl;
+	supermarx::Karl karl("/tmp/karl/");
 	karl.add_product(supermarx::Product{"Appleflaps", 2000});
 	karl.add_product(supermarx::Product{"Mudcrab Sticks", 1337});
+
+	auto products = karl.get_products("Appleflaps");
+	for(auto const& p : products){
+		std::cout << "OMFG! " << p.name << " VOOR SLECHTS " << p.price_in_cents << std::endl;
+	}
 }

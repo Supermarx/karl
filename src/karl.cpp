@@ -5,14 +5,17 @@
 #include <supermarx/product.hpp>
 
 namespace supermarx {
-	void Karl::add_product(Product const& product){
-		std::cout << "Adding " << product.name << " for " << product.price_in_cents << std::endl;
-		products.push_back(product);
+	Karl::Karl(const std::string &writable_directory)
+		: backend(writable_directory)
+	{
 	}
 
-	namespace karl {
-		void do_stuff(){
-			std::cout << "Love your inner communist." << std::endl;
-		}
+	std::vector<Product> Karl::get_products(std::string const& name){
+		return backend.get_products_by_name(name);
+	}
+
+	void Karl::add_product(Product const& product){
+		std::cout << "Adding " << product.name << " for " << product.price_in_cents << std::endl;
+		backend.add_product(product);
 	}
 }
