@@ -10,11 +10,11 @@ namespace supermarx {
 	{
 	}
 
-	std::vector<Product> Karl::get_products(std::string const& name){
+	std::vector<product> Karl::get_products(std::string const& name){
 		return backend.get_products_by_name(name);
 	}
 
-	void Karl::add_product(Product const& product){
+	void Karl::add_product(product const& product){
 		std::cout << "Adding " << product.name << " for " << product.price_in_cents << std::endl;
 		backend.add_product(product);
 	}

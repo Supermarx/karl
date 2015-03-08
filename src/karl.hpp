@@ -4,7 +4,7 @@
 
 #include <supermarx/product.hpp>
 
-#include "rusqlservice.hpp"
+#include "storage.hpp"
 
 namespace supermarx {
 	//! The man who keeps an eye on all the prices.
@@ -14,10 +14,10 @@ namespace supermarx {
 		Karl(std::string const& writable_directory);
 
 		//! Returns producs with this name
-		std::vector<Product> get_products(std::string const& name);
-		void add_product(Product const&);
+		std::vector<product> get_products(std::string const& name);
+		void add_product(product const&);
 
 	private:
-		RuSQLService backend;
+		storage backend;
 	};
 }
