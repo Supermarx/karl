@@ -12,6 +12,7 @@ namespace supermarx {
 	struct Karl {
 		//! Create Karl with a directory where it'll write its data.
 		Karl(std::string const& writable_directory);
+		Karl(std::string const& host, std::string const& user, std::string const& password, const std::string& db);
 
 		//! Returns producs with this name
 		std::vector<product> get_products(std::string const& name);

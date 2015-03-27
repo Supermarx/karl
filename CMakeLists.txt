@@ -8,4 +8,3 @@ include("contrib/wubwubcmake/warning_settings.cmake")
 add_sane_warning_flags()
 
 add_subdirectory("src")
-
