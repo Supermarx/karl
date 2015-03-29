@@ -205,7 +205,7 @@ void storage::update_database_schema()
 			"`supermarket_id` int(11) unsigned null,"+
 			"primary key (`id`),"+
 			"key `supermarket_id` (`supermarket_id`)"+
-			")");
+			") character set utf8 collate utf8_bin");
 
 	if(!productrecord_found)
 		database->execute(std::string() +
@@ -213,15 +213,15 @@ void storage::update_database_schema()
 			"`id` int(10) unsigned not null auto_increment," +
 			"`product_id` int(10) unsigned not null," +
 			"`name` varchar(1024) not null," +
-			"`orig_price` decimal(10,2) not null," +
-			"`price` decimal(10,2) not null," +
+			"`orig_price` int not null," +
+			"`price` int not null," +
 			"`discount_condition` enum('ALWAYS','AT_TWO','AT_THREE') not null," +
 			"`valid_on` date not null," +
 			"`valid_until` date," +
 			"`retrieved_on` datetime not null," +
 			"primary key (`id`)," +
 			"key `product_id` (`product_id`)" +
-			")");
+			") character set utf8 collate utf8_bin");
 
 	if(!supermarket_found)
 		database->execute(std::string() +
@@ -229,7 +229,7 @@ void storage::update_database_schema()
 			"`id` int(11) unsigned not null auto_increment," +
 			"`name` varchar(1024) not null," +
 			"primary key (`id`)" +
-			")");
+			") character set utf8 collate utf8_bin");
 }
 
 void storage::prepare_statements()
@@ -239,6 +239,9 @@ void storage::prepare_statements()
 	{
 		prepared_statements[s] = std::make_shared<rusql::PreparedStatement>(database->prepare(query));
 	};
+
+	database->query("SET NAMES 'utf8'");
+	database->query("SET CHARACTER SET utf8");
 
 	create_statement(statement::add_product, "insert into product (identifier, supermarket_id) values (?, ?)");
 	create_statement(statement::get_product_by_identifier, "select product.id from product where product.identifier = ? and product.supermarket_id = ?");
