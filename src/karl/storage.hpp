@@ -22,6 +22,8 @@ private:
 		get_product_by_identifier,
 
 		add_productdetails,
+		add_productdetailsrecord,
+
 		get_last_productdetails_by_product,
 		get_last_productdetails_by_name,
 		invalidate_productdetails
@@ -46,6 +48,7 @@ private:
 	boost::optional<std::pair<id_t, product>> fetch_last_productdetails_unsafe(id_t product_id);
 
 	id_t find_add_product(std::string const& identifier, id_t supermarket_id);
+	void register_productdetailsrecord(id_t productdetails_id, datetime retrieved_on);
 
 private:
 	// This function is called after the connection to the database is made,
