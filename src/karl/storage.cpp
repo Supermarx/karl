@@ -107,6 +107,26 @@ boost::optional<storage::id_t> storage::find_product_unsafe(std::string const& i
 	return boost::none;
 }
 
+boost::optional<std::pair<storage::id_t, product>> storage::fetch_last_productdetails_unsafe(id_t product_id)
+{
+	auto& qolder = *prepared_statements.at(statement::get_last_productdetails_by_product);
+	qolder.execute(product_id);
+
+	id_t id;
+	product p;
+	std::string raw_discount_condition, raw_valid_on, raw_retrieved_on;
+
+	qolder.bind_results(id, p.identifier, p.name, p.orig_price, p.price, raw_discount_condition, raw_valid_on, raw_retrieved_on);
+	if(!qolder.fetch())
+		return boost::none;
+
+	p.discount_condition = to_condition(raw_discount_condition);
+	p.valid_on = to_date(raw_valid_on);
+	p.retrieved_on = to_datetime(raw_retrieved_on);
+
+	return std::make_pair(id, p);
+}
+
 storage::id_t storage::find_add_product(std::string const& identifier, id_t supermarket_id)
 {
 	{
@@ -140,24 +160,47 @@ void storage::add_product(product const& p)
 {
 	id_t product_id = find_add_product(p.identifier, 1); //TODO supermarket_id stub
 
-	//TODO check if a newer entry is already entered. Perhaps invalidate that entry in such a case.
-	auto& qinvalidate = *prepared_statements.at(statement::invalidate_productrecords);
-	qinvalidate.execute(to_string(p.valid_on), product_id);
+	// TODO Does not need locks, but does require a transaction
 
-	auto& qadd = *prepared_statements.at(statement::add_productrecord);
+	// Check if an older version of the product exactly matches what we've got
+	auto p_old_opt_kvp = fetch_last_productdetails_unsafe(product_id);
+	if(p_old_opt_kvp)
+	{
+		product const& p_old = p_old_opt_kvp->second;
+		bool similar = (
+			p.discount_condition == p_old.discount_condition &&
+			p.name == p_old.name &&
+			p.orig_price == p_old.orig_price &&
+			p.price == p_old.price
+		);
+
+		if(similar)
+		{
+			// Record that details were fetched
+			return;
+		}
+		else
+		{
+			auto& qinvalidate = *prepared_statements.at(statement::invalidate_productdetails);
+			qinvalidate.execute(to_string(p.valid_on), product_id);
+		}
+	}
+
+	//TODO check if a newer entry is already entered. Perhaps invalidate that entry in such a case.
+
+	auto& qadd = *prepared_statements.at(statement::add_productdetails);
 	qadd.execute(product_id, p.name, p.orig_price, p.price, to_string(p.discount_condition), to_string(p.valid_on), to_string(p.retrieved_on));
-	std::cerr << "Inserted productrecord " << qadd.insert_id() << std::endl;
+	std::cerr << "Inserted new productdetails " << qadd.insert_id() << " for product " << p.identifier << " [" << product_id << ']' << std::endl;
 }
 
 std::vector<product> storage::get_products_by_name(std::string const& name)
 {
-	database->get_thread_handle();
 	lock_products_read();
 	guard unlocker([&]() {
 		unlock_all();
 	});
 
-	rusql::PreparedStatement& query = *prepared_statements.at(statement::get_productrecord_by_name);
+	rusql::PreparedStatement& query = *prepared_statements.at(statement::get_last_productdetails_by_name);
 	query.execute(name);
 
 	std::vector<product> products;
@@ -180,7 +223,7 @@ std::vector<product> storage::get_products_by_name(std::string const& name)
 void storage::update_database_schema()
 {
 	bool product_found = false;
-	bool productrecord_found = false;
+	bool productdetails_found = false;
 	bool supermarket_found = false;
 
 	auto result = database->select_query("show tables");
@@ -189,8 +232,8 @@ void storage::update_database_schema()
 		std::string tablename = result.get<std::string>(0);
 		if(tablename == "product")
 			product_found = true;
-		else if(tablename == "productrecord")
-			productrecord_found = true;
+		else if(tablename == "productdetails")
+			productdetails_found = true;
 		else if(tablename == "supermarket")
 			supermarket_found = true;
 
@@ -207,9 +250,9 @@ void storage::update_database_schema()
 			"key `supermarket_id` (`supermarket_id`)"+
 			") character set utf8 collate utf8_bin");
 
-	if(!productrecord_found)
+	if(!productdetails_found)
 		database->execute(std::string() +
-			"create table `productrecord` (" +
+			"create table `productdetails` (" +
 			"`id` int(10) unsigned not null auto_increment," +
 			"`product_id` int(10) unsigned not null," +
 			"`name` varchar(1024) not null," +
@@ -246,9 +289,10 @@ void storage::prepare_statements()
 	create_statement(statement::add_product, "insert into product (identifier, supermarket_id) values (?, ?)");
 	create_statement(statement::get_product_by_identifier, "select product.id from product where product.identifier = ? and product.supermarket_id = ?");
 
-	create_statement(statement::add_productrecord, "insert into productrecord (product_id, name, orig_price, price, discount_condition, valid_on, valid_until, retrieved_on) values(?, ?, ?, ?, ?, ?, NULL, ?)");
-	create_statement(statement::get_productrecord_by_name, "select product.identifier, productrecord.name, productrecord.orig_price, productrecord.price, productrecord.discount_condition, productrecord.valid_on, productrecord.retrieved_on from product inner join productrecord on (product.id = productrecord.product_id) where productrecord.name = ? AND productrecord.valid_until is NULL");
-	create_statement(statement::invalidate_productrecords, "update productrecord set productrecord.valid_until = ? where productrecord.valid_until is null and productrecord.product_id = ?");
+	create_statement(statement::add_productdetails, "insert into productdetails (product_id, name, orig_price, price, discount_condition, valid_on, valid_until, retrieved_on) values(?, ?, ?, ?, ?, ?, NULL, ?)");
+	create_statement(statement::get_last_productdetails_by_product, "select productdetails.id, product.identifier, productdetails.name, productdetails.orig_price, productdetails.price, productdetails.discount_condition, productdetails.valid_on, productdetails.retrieved_on from product inner join productdetails on (product.id = productdetails.product_id) where productdetails.product_id = ? AND productdetails.valid_until is NULL");
+	create_statement(statement::get_last_productdetails_by_name, "select product.identifier, productdetails.name, productdetails.orig_price, productdetails.price, productdetails.discount_condition, productdetails.valid_on, productdetails.retrieved_on from product inner join productdetails on (product.id = productdetails.product_id) where productdetails.name = ? AND productdetails.valid_until is NULL");
+	create_statement(statement::invalidate_productdetails, "update productdetails set productdetails.valid_until = ? where productdetails.valid_until is null and productdetails.product_id = ?");
 }
 
 }

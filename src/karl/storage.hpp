@@ -21,9 +21,10 @@ private:
 		add_product,
 		get_product_by_identifier,
 
-		add_productrecord,
-		get_productrecord_by_name,
-		invalidate_productrecords
+		add_productdetails,
+		get_last_productdetails_by_product,
+		get_last_productdetails_by_name,
+		invalidate_productdetails
 	};
 
 	std::map<statement, std::shared_ptr<rusql::PreparedStatement>> prepared_statements;
@@ -42,6 +43,8 @@ private:
 	void unlock_all();
 
 	boost::optional<id_t> find_product_unsafe(std::string const& identifier, id_t supermarket_id);
+	boost::optional<std::pair<id_t, product>> fetch_last_productdetails_unsafe(id_t product_id);
+
 	id_t find_add_product(std::string const& identifier, id_t supermarket_id);
 
 private:
