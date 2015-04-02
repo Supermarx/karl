@@ -290,7 +290,7 @@ void storage::prepare_statements()
 	create_statement(statement::add_productdetailsrecord, "insert into productdetailsrecord (productdetails_id, retrieved_on) values(?, ?)");
 
 	create_statement(statement::get_last_productdetails_by_product, "select productdetails.id, product.identifier, productdetails.name, productdetails.orig_price, productdetails.price, productdetails.discount_condition, productdetails.valid_on, productdetails.retrieved_on from product inner join productdetails on (product.id = productdetails.product_id) where productdetails.product_id = ? AND productdetails.valid_until is NULL");
-	create_statement(statement::get_last_productdetails_by_name, "select product.identifier, productdetails.name, productdetails.orig_price, productdetails.price, productdetails.discount_condition, productdetails.valid_on, productdetails.retrieved_on from product inner join productdetails on (product.id = productdetails.product_id) where productdetails.name LIKE ? AND productdetails.valid_until is NULL AND product.supermarket_id = ?");
+	create_statement(statement::get_last_productdetails_by_name, "select product.identifier, productdetails.name, productdetails.orig_price, productdetails.price, productdetails.discount_condition, productdetails.valid_on, productdetails.retrieved_on from product inner join productdetails on (product.id = productdetails.product_id) where productdetails.name like ? collate utf8_general_ci AND productdetails.valid_until is NULL AND product.supermarket_id = ?");
 	create_statement(statement::invalidate_productdetails, "update productdetails set productdetails.valid_until = ? where productdetails.valid_until is null and productdetails.product_id = ?");
 }
 
