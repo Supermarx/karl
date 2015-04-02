@@ -1,6 +1,6 @@
-#include "storage.hpp"
+#include <karl/storage.hpp>
 
-#include "guard.hpp"
+#include <karl/util/guard.hpp>
 
 namespace supermarx
 {
@@ -49,31 +49,6 @@ storage::~storage()
 	mysql_library_end();
 }
 
-inline std::string to_string(condition cond)
-{
-	switch(cond)
-	{
-	case condition::ALWAYS:
-		return "ALWAYS";
-	case condition::AT_TWO:
-		return "AT_TWO";
-	case condition::AT_THREE:
-		return "AT_THREE";
-	}
-}
-
-inline condition to_condition(std::string const& str)
-{
-	if(str == "ALWAYS")
-		return condition::ALWAYS;
-	else if(str == "AT_TWO")
-		return condition::AT_TWO;
-	else if(str == "AT_THREE")
-		return condition::AT_THREE;
-
-	throw std::runtime_error("Could not parse condition");
-}
-
 void storage::lock_products_read()
 {
 	// LibRUSQL does not support grabbing a specific connection (yet), do not lock for now
@@ -93,7 +68,7 @@ void storage::unlock_all()
 	//database->query("unlock tables");
 }
 
-boost::optional<storage::id_t> storage::find_product_unsafe(std::string const& identifier, id_t supermarket_id)
+boost::optional<id_t> storage::find_product_unsafe(std::string const& identifier, id_t supermarket_id)
 {
 	auto& qselect = *prepared_statements.at(statement::get_product_by_identifier);
 	qselect.execute(identifier, supermarket_id);
@@ -107,7 +82,7 @@ boost::optional<storage::id_t> storage::find_product_unsafe(std::string const& i
 	return boost::none;
 }
 
-boost::optional<std::pair<storage::id_t, product>> storage::fetch_last_productdetails_unsafe(id_t product_id)
+boost::optional<std::pair<id_t, product>> storage::fetch_last_productdetails_unsafe(id_t product_id)
 {
 	auto& qolder = *prepared_statements.at(statement::get_last_productdetails_by_product);
 	qolder.execute(product_id);
@@ -127,7 +102,7 @@ boost::optional<std::pair<storage::id_t, product>> storage::fetch_last_productde
 	return std::make_pair(id, p);
 }
 
-storage::id_t storage::find_add_product(std::string const& identifier, id_t supermarket_id)
+id_t storage::find_add_product(std::string const& identifier, id_t supermarket_id)
 {
 	{
 		lock_products_read();
@@ -162,9 +137,9 @@ void storage::register_productdetailsrecord(id_t productdetails_id, datetime ret
 	q.execute(productdetails_id, to_string(retrieved_on));
 }
 
-void storage::add_product(product const& p)
+void storage::add_product(product const& p, id_t supermarket_id)
 {
-	id_t product_id = find_add_product(p.identifier, 1); //TODO supermarket_id stub
+	id_t product_id = find_add_product(p.identifier, supermarket_id);
 
 	// TODO Does not need locks, but does require a transaction
 
@@ -202,7 +177,7 @@ void storage::add_product(product const& p)
 	register_productdetailsrecord(productdetails_id, p.retrieved_on);
 }
 
-std::vector<product> storage::get_products_by_name(std::string const& name)
+std::vector<product> storage::get_products_by_name(std::string const& name, id_t supermarket_id)
 {
 	lock_products_read();
 	guard unlocker([&]() {
@@ -210,7 +185,7 @@ std::vector<product> storage::get_products_by_name(std::string const& name)
 	});
 
 	rusql::PreparedStatement& query = *prepared_statements.at(statement::get_last_productdetails_by_name);
-	query.execute(name);
+	query.execute(std::string("%") + name + "%", supermarket_id);
 
 	std::vector<product> products;
 	product row;
@@ -267,7 +242,7 @@ void storage::update_database_schema()
 			"create table `productdetails` (" +
 			"`id` int(10) unsigned not null auto_increment," +
 			"`product_id` int(10) unsigned not null," +
-			"`name` varchar(1024) not null," +
+			"`name` varchar(1024) character set utf8 not null," +
 			"`orig_price` int not null," +
 			"`price` int not null," +
 			"`discount_condition` enum('ALWAYS','AT_TWO','AT_THREE') not null," +
@@ -315,7 +290,7 @@ void storage::prepare_statements()
 	create_statement(statement::add_productdetailsrecord, "insert into productdetailsrecord (productdetails_id, retrieved_on) values(?, ?)");
 
 	create_statement(statement::get_last_productdetails_by_product, "select productdetails.id, product.identifier, productdetails.name, productdetails.orig_price, productdetails.price, productdetails.discount_condition, productdetails.valid_on, productdetails.retrieved_on from product inner join productdetails on (product.id = productdetails.product_id) where productdetails.product_id = ? AND productdetails.valid_until is NULL");
-	create_statement(statement::get_last_productdetails_by_name, "select product.identifier, productdetails.name, productdetails.orig_price, productdetails.price, productdetails.discount_condition, productdetails.valid_on, productdetails.retrieved_on from product inner join productdetails on (product.id = productdetails.product_id) where productdetails.name = ? AND productdetails.valid_until is NULL");
+	create_statement(statement::get_last_productdetails_by_name, "select product.identifier, productdetails.name, productdetails.orig_price, productdetails.price, productdetails.discount_condition, productdetails.valid_on, productdetails.retrieved_on from product inner join productdetails on (product.id = productdetails.product_id) where productdetails.name LIKE ? AND productdetails.valid_until is NULL AND product.supermarket_id = ?");
 	create_statement(statement::invalidate_productdetails, "update productdetails set productdetails.valid_until = ? where productdetails.valid_until is null and productdetails.product_id = ?");
 }
 

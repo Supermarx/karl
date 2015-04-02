@@ -4,15 +4,13 @@
 #include <boost/optional.hpp>
 #include <rusql/database.hpp>
 
+#include <supermarx/id_t.hpp>
 #include <supermarx/product.hpp>
 
 namespace supermarx
 {
 class storage
 {
-public:
-	typedef uint64_t id_t;
-
 private:
 	std::shared_ptr<rusql::Database> database;
 
@@ -36,8 +34,8 @@ public:
 	storage(std::string const& host, std::string const& user, std::string const& password, const std::string& db);
 	~storage();
 
-	void add_product(product const& p);
-	std::vector<product> get_products_by_name(std::string const& name);
+	void add_product(product const& p, id_t supermarket_id);
+	std::vector<product> get_products_by_name(std::string const& name, id_t supermarket_id);
 
 private:
 	void lock_products_read();
