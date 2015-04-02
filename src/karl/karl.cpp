@@ -2,6 +2,8 @@
 
 #include <iostream>
 
+#include <karl/util/log.hpp>
+
 namespace supermarx {
 	karl::karl(const std::string &writable_directory)
 		: backend(writable_directory)
@@ -18,6 +20,7 @@ namespace supermarx {
 
 	void karl::add_product(product const& product, id_t supermarket_id)
 	{
+		log("karl::karl", log::level_e::DEBUG)() << "Received product " << product.name << " [" << supermarket_id << "] [" << product.identifier << "]";
 		backend.add_product(product, supermarket_id);
 	}
 }

@@ -22,10 +22,16 @@ bool fcgi_request::response()
 	try
 	{
 		response_handler::respond(r, k);
-	} catch(std::exception& e)
+	}
+	catch(api_exception e)
+	{
+		log("api::fcgi_request", log::WARNING)() << "api_exception - " << api_exception_message(e) << " (" << e << ")";
+	}
+	catch(std::exception& e)
 	{
 		log("api::fcgi_request", log::ERROR)() << "Uncaught exception: " << e.what();
-	} catch ( ... )
+	}
+	catch ( ... )
 	{
 		log("api::fcgi_request", log::ERROR)() << "Uncaught unexpected object";
 	}

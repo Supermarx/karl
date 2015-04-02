@@ -131,7 +131,7 @@ bool process(request& r, response_handler::serializer_ptr& s, karl& k, const uri
 		return true;
 	}
 
-	if(u.match_path(0, "push_product"))
+	if(u.match_path(0, "add_product"))
 	{
 		if(u.path.size() != 2)
 			return false;
@@ -140,7 +140,8 @@ bool process(request& r, response_handler::serializer_ptr& s, karl& k, const uri
 		product p = deserialize_payload<product>(r, "product");
 
 		k.add_product(p, supermarket_id);
-		r.write_text("done");
+		s->write_object("response", 1);
+		s->write("status", std::string("done"));
 		return true;
 	}
 
