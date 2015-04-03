@@ -145,6 +145,22 @@ bool process(request& r, response_handler::serializer_ptr& s, karl& k, const uri
 		return true;
 	}
 
+	if(u.match_path(0, "get_product_summary"))
+	{
+		if(u.path.size() != 3)
+			return false;
+
+		id_t supermarket_id = boost::lexical_cast<id_t>(u.path[1]);
+		std::string identifier = u.path[2];
+
+		auto p_opt = k.get_product_summary(identifier, supermarket_id);
+		if(!p_opt)
+			throw api_exception::product_not_found;
+
+		serialize(s, "product_summary", *p_opt);
+		return true;
+	}
+
 	return false;
 }
 

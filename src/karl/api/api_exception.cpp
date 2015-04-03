@@ -16,6 +16,8 @@ std::string api_exception_message(api_exception e)
 		return "Path not found.";
 	case format_unknown:
 		return "Format not supported.";
+	case product_not_found:
+		return "Product not found.";
 	case payload_expected:
 		return "Expected a payload in the POST request, but did not receive any.";
 	case session_expected:
@@ -36,6 +38,7 @@ std::string api_exception_status(api_exception e)
 	case state_unexpected:
 		return "500 Internal Server Error";
 	case path_unknown:
+	case product_not_found:
 		return "404 Not Found";
 	case format_unknown:
 	case payload_expected:

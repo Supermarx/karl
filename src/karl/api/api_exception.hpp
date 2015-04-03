@@ -13,6 +13,7 @@ enum api_exception : uint64_t
 
 	path_unknown =			201,
 	format_unknown =		202,
+	product_not_found =		203,
 
 	payload_expected =		301,
 	session_expected =		302,

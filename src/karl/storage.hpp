@@ -6,6 +6,7 @@
 
 #include <supermarx/id_t.hpp>
 #include <supermarx/product.hpp>
+#include <supermarx/api/product_summary.hpp>
 
 namespace supermarx
 {
@@ -22,6 +23,7 @@ private:
 		add_productdetails,
 		add_productdetailsrecord,
 
+		get_all_productdetails_by_product,
 		get_last_productdetails_by_product,
 		get_last_productdetails_by_name,
 		invalidate_productdetails
@@ -36,6 +38,7 @@ public:
 
 	void add_product(product const& p, id_t supermarket_id);
 	std::vector<product> get_products_by_name(std::string const& name, id_t supermarket_id);
+	boost::optional<product_summary> get_product_summary(std::string const& identifier, id_t supermarket_id);
 
 private:
 	void lock_products_read();

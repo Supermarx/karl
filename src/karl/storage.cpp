@@ -177,6 +177,42 @@ void storage::add_product(product const& p, id_t supermarket_id)
 	register_productdetailsrecord(productdetails_id, p.retrieved_on);
 }
 
+boost::optional<product_summary> storage::get_product_summary(std::string const& identifier, id_t supermarket_id)
+{
+	lock_products_read();
+	guard unlocker([&]() {
+		unlock_all();
+	});
+
+	auto product_id_opt = find_product_unsafe(identifier, supermarket_id);
+	if(!product_id_opt)
+		return boost::none;
+
+	id_t product_id = *product_id_opt;
+
+	product_summary result;
+	result.identifier = identifier;
+
+	product row;
+	id_t productdetails_id;
+	std::string raw_discount_condition, raw_valid_on, raw_retrieved_on;
+	rusql::PreparedStatement& query = *prepared_statements.at(statement::get_all_productdetails_by_product);
+	query.execute(product_id);
+
+	query.bind_results(productdetails_id, row.identifier, row.name, row.orig_price, row.price, raw_discount_condition, raw_valid_on, raw_retrieved_on);
+	while(query.fetch())
+	{
+		row.discount_condition = to_condition(raw_discount_condition);
+		row.valid_on = to_date(raw_valid_on);
+		row.retrieved_on = to_datetime(raw_retrieved_on);
+
+		result.name = row.name;
+		result.pricehistory.emplace_back(row.valid_on, row.price);
+	}
+
+	return result;
+}
+
 std::vector<product> storage::get_products_by_name(std::string const& name, id_t supermarket_id)
 {
 	lock_products_read();
@@ -289,6 +325,7 @@ void storage::prepare_statements()
 	create_statement(statement::add_productdetails, "insert into productdetails (product_id, name, orig_price, price, discount_condition, valid_on, valid_until, retrieved_on) values(?, ?, ?, ?, ?, ?, NULL, ?)");
 	create_statement(statement::add_productdetailsrecord, "insert into productdetailsrecord (productdetails_id, retrieved_on) values(?, ?)");
 
+	create_statement(statement::get_all_productdetails_by_product, "select productdetails.id, product.identifier, productdetails.name, productdetails.orig_price, productdetails.price, productdetails.discount_condition, productdetails.valid_on, productdetails.retrieved_on from product inner join productdetails on (product.id = productdetails.product_id) where productdetails.product_id = ? order by productdetails.id asc");
 	create_statement(statement::get_last_productdetails_by_product, "select productdetails.id, product.identifier, productdetails.name, productdetails.orig_price, productdetails.price, productdetails.discount_condition, productdetails.valid_on, productdetails.retrieved_on from product inner join productdetails on (product.id = productdetails.product_id) where productdetails.product_id = ? AND productdetails.valid_until is NULL");
 	create_statement(statement::get_last_productdetails_by_name, "select product.identifier, productdetails.name, productdetails.orig_price, productdetails.price, productdetails.discount_condition, productdetails.valid_on, productdetails.retrieved_on from product inner join productdetails on (product.id = productdetails.product_id) where productdetails.name like ? AND productdetails.valid_until is NULL AND product.supermarket_id = ?");
 	create_statement(statement::invalidate_productdetails, "update productdetails set productdetails.valid_until = ? where productdetails.valid_until is null and productdetails.product_id = ?");
