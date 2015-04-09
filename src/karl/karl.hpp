@@ -15,7 +15,6 @@ namespace supermarx
 	class karl
 	{
 	public:
-		karl(std::string const& writable_directory);
 		karl(std::string const& host, std::string const& user, std::string const& password, const std::string& db);
 
 		std::vector<product> get_products(std::string const& name, id_t supermarket_id);

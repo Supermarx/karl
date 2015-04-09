@@ -5,10 +5,6 @@
 #include <karl/util/log.hpp>
 
 namespace supermarx {
-	karl::karl(const std::string &writable_directory)
-		: backend(writable_directory)
-	{}
-
 	karl::karl(std::string const& host, std::string const& user, std::string const& password, const std::string& db)
 		: backend(host, user, password, db)
 	{}

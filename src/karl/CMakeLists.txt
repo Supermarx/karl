@@ -6,7 +6,7 @@ list(APPEND Karl_INCLUDE_DIRS ${SuperMarx_INCLUDE_DIRS})
 # find_package(librusql REQUIRED)
 list(APPEND Karl_INCLUDE_DIRS ${librusql_INCLUDE_DIRS})
 
-find_package(Boost COMPONENTS system program_options regex chrono date_time REQUIRED)
+find_package(Boost COMPONENTS system program_options regex chrono date_time thread REQUIRED)
 
 find_package(yaml-cpp REQUIRED)
 list(APPEND Karl_INCLUDE_DIRS ${yaml-cpp_INCLUDE_DIRS})
@@ -14,9 +14,12 @@ list(APPEND Karl_INCLUDE_DIRS ${yaml-cpp_INCLUDE_DIRS})
 find_package(fastcgipp REQUIRED)
 list(APPEND Karl_INCLUDE_DIRS ${fastcgipp_INCLUDE_DIRS})
 
+find_package(pqxx REQUIRED)
+list(APPEND Karl_INCLUDE_DIRS ${pqxx_INCLUDE_DIRS})
+
 add_library(karlcore karl.cpp storage.cpp config.cpp util/log.cpp)
 target_link_libraries(karlcore
-	rusql
+	${pqxx_LIBRARIES}
 	${yaml-cpp_LIBRARIES}
 	${Boost_LIBRARIES})
 
@@ -26,7 +29,7 @@ target_link_libraries(karlapi
 	supermarx-serialization-xml
 	supermarx-serialization-msgpack
 	supermarx-serialization-json
-	${fastcgipp_LIBRARIES}) 
+	${fastcgipp_LIBRARIES})
 
 add_executable(karl main.cpp)
 target_link_libraries(karl karlcore karlapi)
