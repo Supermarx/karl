@@ -329,7 +329,7 @@ void storage::prepare_statements()
 	conn.prepare(conv(statement::get_all_productdetails_by_product), "select productdetails.id, product.identifier, productdetails.name, productdetails.orig_price, productdetails.price, productdetails.discount_condition, productdetails.valid_on, productdetails.retrieved_on from product inner join productdetails on (product.id = productdetails.product_id) where productdetails.product_id = $1 order by productdetails.id asc");
 	conn.prepare(conv(statement::get_last_productdetails_by_product), "select productdetails.id, product.identifier, productdetails.name, productdetails.orig_price, productdetails.price, productdetails.discount_condition, productdetails.valid_on, productdetails.retrieved_on from product inner join productdetails on (product.id = productdetails.product_id) where productdetails.product_id = $1 AND productdetails.valid_until is NULL");
 	conn.prepare(conv(statement::get_last_productdetails_by_name), "select product.identifier, productdetails.name, productdetails.orig_price, productdetails.price, productdetails.discount_condition, productdetails.valid_on, productdetails.retrieved_on from product inner join productdetails on (product.id = productdetails.product_id) where productdetails.name like $1 AND productdetails.valid_until is NULL AND product.supermarket_id = $2");
-	conn.prepare(conv(statement::invalidate_productdetails), "update productdetails set productdetails.valid_until = $1 where productdetails.valid_until is null and productdetails.product_id = $2");
+	conn.prepare(conv(statement::invalidate_productdetails), "update productdetails set valid_until = $1 where productdetails.valid_until is null and productdetails.product_id = $2");
 }
 
 }
