@@ -59,7 +59,6 @@ void read_product(pqxx::result::tuple& row, product& p)
 	rcoladv(row, p, orig_price);
 	rcoladv(row, p, price);
 	rcoladv(row, p, valid_on);
-	rcoladv(row, p, retrieved_on);
 	rcoladv(row, p, discount_condition);
 }
 
@@ -157,14 +156,15 @@ id_t find_add_product(pqxx::connection& conn, std::string const& identifier, id_
 	}
 }
 
-void register_productdetailsrecord(pqxx::transaction_base& txn, id_t productdetails_id, datetime retrieved_on)
+void register_productdetailsrecord(pqxx::transaction_base& txn, id_t productdetails_id, datetime retrieved_on, confidence conf)
 {
 	txn.prepared(conv(statement::add_productdetailsrecord))
 			(productdetails_id)
-			(to_string(retrieved_on)).exec();
+			(to_string(retrieved_on))
+			(to_string(conf)).exec();
 }
 
-void storage::add_product(product const& p, id_t supermarket_id)
+void storage::add_product(product const& p, id_t supermarket_id, datetime retrieved_on, confidence conf)
 {
 	id_t product_id = find_add_product(conn, p.identifier, supermarket_id);
 
@@ -184,7 +184,7 @@ void storage::add_product(product const& p, id_t supermarket_id)
 
 		if(similar)
 		{
-			register_productdetailsrecord(txn, p_old_opt_kvp->first, p.retrieved_on);
+			register_productdetailsrecord(txn, p_old_opt_kvp->first, retrieved_on, conf);
 			txn.commit();
 			return;
 		}
@@ -200,16 +200,16 @@ void storage::add_product(product const& p, id_t supermarket_id)
 	pqxx::result result = txn.prepared(conv(statement::add_productdetails))
 			(product_id)(p.name)(p.orig_price)(p.price)
 			(to_string(p.discount_condition))(to_string(p.valid_on))
-			(to_string(p.retrieved_on)).exec();
+			(to_string(retrieved_on)).exec();
 
 	id_t productdetails_id = read_id(result);
 	log("storage::storage", log::level_e::NOTICE)() << "Inserted new productdetails " << productdetails_id << " for product " << p.identifier << " [" << product_id << ']';
 
-	register_productdetailsrecord(txn, productdetails_id, p.retrieved_on);
+	register_productdetailsrecord(txn, productdetails_id, retrieved_on, conf);
 	txn.commit();
 }
 
-boost::optional<product_summary> storage::get_product_summary(std::string const& identifier, id_t supermarket_id)
+boost::optional<api::product_summary> storage::get_product_summary(std::string const& identifier, id_t supermarket_id)
 {
 	pqxx::work txn(conn);
 
@@ -217,7 +217,7 @@ boost::optional<product_summary> storage::get_product_summary(std::string const&
 	if(!product_id_opt)
 		return boost::none;
 
-	product_summary summary;
+	api::product_summary summary;
 	summary.identifier = identifier;
 
 	pqxx::result result = txn.prepared(conv(statement::get_all_productdetails_by_product))
@@ -293,8 +293,8 @@ void storage::update_database_schema()
 			 "orig_price int not null," +
 			 "price int not null," +
 			 "discount_condition discount_condition_t not null," +
-			 "valid_on date not null," +
-			 "valid_until date," +
+			 "valid_on timestamp not null," +
+			 "valid_until timestamp," +
 			 "retrieved_on timestamp not null" +
 			 ")");
 
@@ -302,10 +302,14 @@ void storage::update_database_schema()
 			 "create index productdetails_product_idx on productdetails(product_id)");
 
 	try_create(std::string() +
+			 "create type confidence_t as enum ('LOW','NEUTRAL','HIGH', 'PERFECT')");
+
+	try_create(std::string() +
 			 "create table productdetailsrecord (" +
 			 "id serial primary key," +
 			 "productdetails_id int not null," +
-			 "retrieved_on timestamp not null" +
+			 "retrieved_on timestamp not null," +
+			 "confidence confidence_t not null default 'LOW'"
 			 ")");
 
 	try_create(std::string() +
@@ -324,7 +328,7 @@ void storage::prepare_statements()
 	conn.prepare(conv(statement::get_product_by_identifier), "select product.id from product where product.identifier = $1 and product.supermarket_id = $2");
 
 	conn.prepare(conv(statement::add_productdetails), "insert into productdetails (product_id, name, orig_price, price, discount_condition, valid_on, valid_until, retrieved_on) values($1, $2, $3, $4, $5, $6, NULL, $7) returning id");
-	conn.prepare(conv(statement::add_productdetailsrecord), "insert into productdetailsrecord (productdetails_id, retrieved_on) values($1, $2) returning id");
+	conn.prepare(conv(statement::add_productdetailsrecord), "insert into productdetailsrecord (productdetails_id, retrieved_on, confidence) values($1, $2, $3) returning id");
 
 	conn.prepare(conv(statement::get_all_productdetails_by_product), "select productdetails.id, product.identifier, productdetails.name, productdetails.orig_price, productdetails.price, productdetails.discount_condition, productdetails.valid_on, productdetails.retrieved_on from product inner join productdetails on (product.id = productdetails.product_id) where productdetails.product_id = $1 order by productdetails.id asc");
 	conn.prepare(conv(statement::get_last_productdetails_by_product), "select productdetails.id, product.identifier, productdetails.name, productdetails.orig_price, productdetails.price, productdetails.discount_condition, productdetails.valid_on, productdetails.retrieved_on from product inner join productdetails on (product.id = productdetails.product_id) where productdetails.product_id = $1 AND productdetails.valid_until is NULL");

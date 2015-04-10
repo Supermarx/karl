@@ -18,8 +18,8 @@ namespace supermarx
 		karl(std::string const& host, std::string const& user, std::string const& password, const std::string& db);
 
 		std::vector<product> get_products(std::string const& name, id_t supermarket_id);
-		boost::optional<product_summary> get_product_summary(std::string const& identifier, id_t supermarket_id);
-		void add_product(product const&, id_t supermarket_id);
+		boost::optional<api::product_summary> get_product_summary(std::string const& identifier, id_t supermarket_id);
+		void add_product(product const&, id_t supermarket_id, datetime retrieved_on, confidence conf);
 
 	private:
 		storage backend;

@@ -10,6 +10,8 @@
 #include <supermarx/serialization/serialize_fusion.hpp>
 #include <supermarx/serialization/deserialize_fusion.hpp>
 
+#include <supermarx/api/add_product.hpp>
+
 #include <karl/api/api_exception.hpp>
 #include <karl/api/uri.hpp>
 
@@ -137,9 +139,9 @@ bool process(request& r, response_handler::serializer_ptr& s, karl& k, const uri
 			return false;
 
 		id_t supermarket_id = boost::lexical_cast<id_t>(u.path[1]);
-		product p = deserialize_payload<product>(r, "product");
+		api::add_product request = deserialize_payload<api::add_product>(r, "addproduct");
 
-		k.add_product(p, supermarket_id);
+		k.add_product(request.p, supermarket_id, request.retrieved_on, request.c);
 		s->write_object("response", 1);
 		s->write("status", std::string("done"));
 		return true;
@@ -166,7 +168,7 @@ bool process(request& r, response_handler::serializer_ptr& s, karl& k, const uri
 
 void response_handler::respond(request& r, karl& k)
 {
-	r.write_header("Server", "karl");
+	r.write_header("Server", "karl/0.1");
 
 	// Decode url to path.
 	std::string request_path;
