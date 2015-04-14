@@ -44,12 +44,6 @@ void rcol<datetime>(pqxx::result::tuple& row, datetime& rhs, std::string const& 
 	rhs = to_datetime(row[key].as<std::string>());
 }
 
-template<>
-void rcol<condition>(pqxx::result::tuple& row, condition& rhs, std::string const& key)
-{
-	rhs = to_condition(row[key].as<std::string>());
-}
-
 #define rcoladv(row, p, col) { rcol(row, p.col, #col); }
 
 void read_product(pqxx::result::tuple& row, product& p)
@@ -59,7 +53,7 @@ void read_product(pqxx::result::tuple& row, product& p)
 	rcoladv(row, p, orig_price);
 	rcoladv(row, p, price);
 	rcoladv(row, p, valid_on);
-	rcoladv(row, p, discount_condition);
+	rcoladv(row, p, discount_amount);
 }
 
 #undef rcoladv
@@ -176,7 +170,7 @@ void storage::add_product(product const& p, id_t supermarket_id, datetime retrie
 	{
 		product const& p_old = p_old_opt_kvp->second;
 		bool similar = (
-			p.discount_condition == p_old.discount_condition &&
+			p.discount_amount == p_old.discount_amount &&
 			p.name == p_old.name &&
 			p.orig_price == p_old.orig_price &&
 			p.price == p_old.price
@@ -199,7 +193,7 @@ void storage::add_product(product const& p, id_t supermarket_id, datetime retrie
 	//TODO check if a newer entry is already entered. Perhaps invalidate that entry in such a case.
 	pqxx::result result = txn.prepared(conv(statement::add_productdetails))
 			(product_id)(p.name)(p.orig_price)(p.price)
-			(to_string(p.discount_condition))(to_string(p.valid_on))
+			(p.discount_amount)(to_string(p.valid_on))
 			(to_string(retrieved_on)).exec();
 
 	id_t productdetails_id = read_id(result);
@@ -283,16 +277,13 @@ void storage::update_database_schema()
 			 "create index product_identifierx on product(identifier)");
 
 	try_create(std::string() +
-			 "create type discount_condition_t as enum ('ALWAYS','AT_TWO','AT_THREE')");
-
-	try_create(std::string() +
 			 "create table productdetails (" +
 			 "id serial primary key," +
 			 "product_id int not null," +
 			 "name varchar(1024) not null," +
 			 "orig_price int not null," +
 			 "price int not null," +
-			 "discount_condition discount_condition_t not null," +
+			 "discount_amount int not null," +
 			 "valid_on timestamp not null," +
 			 "valid_until timestamp," +
 			 "retrieved_on timestamp not null" +
@@ -327,12 +318,12 @@ void storage::prepare_statements()
 	conn.prepare(conv(statement::add_product), "insert into product (identifier, supermarket_id) values ($1, $2) returning id");
 	conn.prepare(conv(statement::get_product_by_identifier), "select product.id from product where product.identifier = $1 and product.supermarket_id = $2");
 
-	conn.prepare(conv(statement::add_productdetails), "insert into productdetails (product_id, name, orig_price, price, discount_condition, valid_on, valid_until, retrieved_on) values($1, $2, $3, $4, $5, $6, NULL, $7) returning id");
+	conn.prepare(conv(statement::add_productdetails), "insert into productdetails (product_id, name, orig_price, price, discount_amount, valid_on, valid_until, retrieved_on) values($1, $2, $3, $4, $5, $6, NULL, $7) returning id");
 	conn.prepare(conv(statement::add_productdetailsrecord), "insert into productdetailsrecord (productdetails_id, retrieved_on, confidence) values($1, $2, $3) returning id");
 
-	conn.prepare(conv(statement::get_all_productdetails_by_product), "select productdetails.id, product.identifier, productdetails.name, productdetails.orig_price, productdetails.price, productdetails.discount_condition, productdetails.valid_on, productdetails.retrieved_on from product inner join productdetails on (product.id = productdetails.product_id) where productdetails.product_id = $1 order by productdetails.id asc");
-	conn.prepare(conv(statement::get_last_productdetails_by_product), "select productdetails.id, product.identifier, productdetails.name, productdetails.orig_price, productdetails.price, productdetails.discount_condition, productdetails.valid_on, productdetails.retrieved_on from product inner join productdetails on (product.id = productdetails.product_id) where productdetails.product_id = $1 AND productdetails.valid_until is NULL");
-	conn.prepare(conv(statement::get_last_productdetails_by_name), "select product.identifier, productdetails.name, productdetails.orig_price, productdetails.price, productdetails.discount_condition, productdetails.valid_on, productdetails.retrieved_on from product inner join productdetails on (product.id = productdetails.product_id) where lower(productdetails.name) like lower($1) AND productdetails.valid_until is NULL AND product.supermarket_id = $2");
+	conn.prepare(conv(statement::get_all_productdetails_by_product), "select productdetails.id, product.identifier, productdetails.name, productdetails.orig_price, productdetails.price, productdetails.discount_amount, productdetails.valid_on, productdetails.retrieved_on from product inner join productdetails on (product.id = productdetails.product_id) where productdetails.product_id = $1 order by productdetails.id asc");
+	conn.prepare(conv(statement::get_last_productdetails_by_product), "select productdetails.id, product.identifier, productdetails.name, productdetails.orig_price, productdetails.price, productdetails.discount_amount, productdetails.valid_on, productdetails.retrieved_on from product inner join productdetails on (product.id = productdetails.product_id) where productdetails.product_id = $1 AND productdetails.valid_until is NULL");
+	conn.prepare(conv(statement::get_last_productdetails_by_name), "select product.identifier, productdetails.name, productdetails.orig_price, productdetails.price, productdetails.discount_amount, productdetails.valid_on, productdetails.retrieved_on from product inner join productdetails on (product.id = productdetails.product_id) where lower(productdetails.name) like lower($1) AND productdetails.valid_until is NULL AND product.supermarket_id = $2");
 	conn.prepare(conv(statement::invalidate_productdetails), "update productdetails set valid_until = $1 where productdetails.valid_until is null and productdetails.product_id = $2");
 }
 
