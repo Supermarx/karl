@@ -40,7 +40,10 @@ void init_serializer(request& r, response_handler::serializer_ptr& s)
 		r.write_header("Content-Type", "application/xml");
 	}
 	else if(format->second == "json")
+	{
 		s.reset(new json_serializer());
+		r.write_header("Content-Type", "application/json");
+	}
 	else if(format->second == "msgpack")
 		s.reset(new msgpack_serializer());
 	else if(format->second == "msgpack_compact")
