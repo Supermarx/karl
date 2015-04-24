@@ -1,0 +1,1 @@
+select product.id from product where product.identifier = $1 and product.supermarket_id = $2

@@ -1,0 +1,1 @@
+update productdetails set valid_until = $1 where productdetails.valid_until is null and productdetails.product_id = $2

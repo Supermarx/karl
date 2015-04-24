@@ -1,0 +1,1 @@
+insert into productdetailsrecord (productdetails_id, retrieved_on, confidence) values($1, $2, $3) returning id

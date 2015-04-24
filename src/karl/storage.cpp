@@ -4,6 +4,8 @@
 #include <karl/util/guard.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 
+#include "sql.cc"
+
 namespace supermarx
 {
 
@@ -23,7 +25,7 @@ enum class statement : uint8_t
 
 std::string conv(statement rhs)
 {
-	return std::string("PREP_STATEMENT") + boost::lexical_cast<std::string>((uint8_t)rhs);
+	return std::string("PREP_STATEMENT") + boost::lexical_cast<std::string>((uint32_t)rhs);
 }
 
 template<typename T>
@@ -270,12 +272,13 @@ void storage::update_database_schema()
 		}
 	};
 
-	try_create(std::string() +
-			"create table product ("+
-			"id serial primary key,"+
-			"identifier varchar(1024) not null,"+
-			"supermarket_id integer not null"+
-			")");
+	try_create(R"prefix(
+		create table product (
+			id serial primary key,
+			identifier varchar(1024) not null,
+			supermarket_id integer not null
+		)
+	)prefix");
 
 	try_create(std::string() +
 			 "create index product_supermarket_idx on product(supermarket_id)");
@@ -319,18 +322,24 @@ void storage::update_database_schema()
 			 ")");
 }
 
+#define PREPARE_STATEMENT(NAME)\
+	conn.prepare(conv(statement::NAME), std::string((char*) sql_ ## NAME, sql_ ## NAME ## _len));
+
 void storage::prepare_statements()
 {
-	conn.prepare(conv(statement::add_product), "insert into product (identifier, supermarket_id) values ($1, $2) returning id");
-	conn.prepare(conv(statement::get_product_by_identifier), "select product.id from product where product.identifier = $1 and product.supermarket_id = $2");
+	PREPARE_STATEMENT(add_productdetails)
 
-	conn.prepare(conv(statement::add_productdetails), "insert into productdetails (product_id, name, orig_price, price, discount_amount, valid_on, valid_until, retrieved_on) values($1, $2, $3, $4, $5, $6, NULL, $7) returning id");
-	conn.prepare(conv(statement::add_productdetailsrecord), "insert into productdetailsrecord (productdetails_id, retrieved_on, confidence) values($1, $2, $3) returning id");
+	PREPARE_STATEMENT(add_product)
+	PREPARE_STATEMENT(get_product_by_identifier)
 
-	conn.prepare(conv(statement::get_all_productdetails_by_product), "select productdetails.id, product.identifier, productdetails.name, productdetails.orig_price, productdetails.price, productdetails.discount_amount, productdetails.valid_on, productdetailsrecord.retrieved_on from product inner join productdetails on (product.id = productdetails.product_id) inner join productdetailsrecord on (productdetails.id = productdetailsrecord.productdetails_id) where productdetails.product_id = $1 order by productdetailsrecord.id asc");
-	conn.prepare(conv(statement::get_last_productdetails_by_product), "select productdetails.id, product.identifier, productdetails.name, productdetails.orig_price, productdetails.price, productdetails.discount_amount, productdetails.valid_on, productdetails.retrieved_on from product inner join productdetails on (product.id = productdetails.product_id) where productdetails.product_id = $1 AND productdetails.valid_until is NULL");
-	conn.prepare(conv(statement::get_last_productdetails_by_name), "select product.identifier, productdetails.name, productdetails.orig_price, productdetails.price, productdetails.discount_amount, productdetails.valid_on, productdetails.retrieved_on from product inner join productdetails on (product.id = productdetails.product_id) where lower(productdetails.name) like lower($1) AND productdetails.valid_until is NULL AND product.supermarket_id = $2");
-	conn.prepare(conv(statement::invalidate_productdetails), "update productdetails set valid_until = $1 where productdetails.valid_until is null and productdetails.product_id = $2");
+	PREPARE_STATEMENT(add_productdetailsrecord)
+
+	PREPARE_STATEMENT(get_all_productdetails_by_product)
+	PREPARE_STATEMENT(get_last_productdetails_by_product)
+	PREPARE_STATEMENT(get_last_productdetails_by_name)
+	PREPARE_STATEMENT(invalidate_productdetails)
 }
+
+#undef PREPARE_STATEMENT
 
 }
