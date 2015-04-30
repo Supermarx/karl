@@ -256,71 +256,70 @@ std::vector<product> storage::get_products_by_name(std::string const& name, id_t
 	return products;
 }
 
+#define ADD_SCHEMA(ID)\
+	schema_queries.emplace(std::make_pair(ID, std::string((char*) sql_schema_ ## ID, sql_schema_ ## ID ## _len)));
+
 void storage::update_database_schema()
 {
-	auto try_create = [&](std::string const& q)
+	std::map<unsigned int, std::string> schema_queries;
+	ADD_SCHEMA(1);
+
+	const size_t target_schema_version = 1;
+
+	unsigned int schema_version = 0;
+	try
 	{
+		pqxx::work txn(conn);
+		pqxx::result result(txn.exec("select value from karlinfo where key = 'schemaversion'"));
+
+		if(result.begin() == result.end())
+			throw std::runtime_error("Could not fetch schemaversion");
+
+		schema_version = boost::lexical_cast<unsigned int>(result.begin()["value"].as<std::string>());
+	} catch(pqxx::sql_error e)
+	{
+		if(!boost::algorithm::starts_with(e.what(), "ERROR:  relation \"karlinfo\" does not exist"))
+			throw e;
+
+		pqxx::work txn(conn);
+		txn.exec(R"prefix(
+				 create table karlinfo (
+					 key varchar not null,
+					 value varchar not null
+					 )
+				 )prefix");
+
+				txn.exec("insert into karlinfo (key, value) values ('schemaversion', 0)");
+		txn.commit();
+	}
+
+	conn.prepare("UPGRADE_SCHEMA", "update karlinfo set value = $1 where key = 'schemaversion'");
+	while(schema_version < target_schema_version)
+	{
+		schema_version++;
+
+		pqxx::work txn(conn);
+		auto pair_it = schema_queries.find(schema_version);
+
+		if(pair_it == schema_queries.end())
+			throw std::runtime_error("Could not find appropriate schema upgrade query");
+
 		try
 		{
-			pqxx::work txn(conn);
-			txn.exec(q);
+			txn.exec(pair_it->second);
+			txn.prepared("UPGRADE_SCHEMA")(schema_version).exec();
 			txn.commit();
 		} catch(pqxx::sql_error e)
 		{
-			if(!boost::algorithm::ends_with(e.what(), "already exists\n"))
-				throw e;
+			log("storage::update_database_schema", log::level_e::ERROR)() << "Failed to upgrade to schema version " << schema_version << ":\n" << e.what();
+			throw std::runtime_error("Failed to upgrade schema version");
 		}
-	};
 
-	try_create(R"prefix(
-		create table product (
-			id serial primary key,
-			identifier varchar(1024) not null,
-			supermarket_id integer not null
-		)
-	)prefix");
-
-	try_create(std::string() +
-			 "create index product_supermarket_idx on product(supermarket_id)");
-	try_create(std::string() +
-			 "create index product_identifierx on product(identifier)");
-
-	try_create(std::string() +
-			 "create table productdetails (" +
-			 "id serial primary key," +
-			 "product_id int not null," +
-			 "name varchar(1024) not null," +
-			 "orig_price int not null," +
-			 "price int not null," +
-			 "discount_amount int not null," +
-			 "valid_on timestamp not null," +
-			 "valid_until timestamp," +
-			 "retrieved_on timestamp not null" +
-			 ")");
-
-	try_create(std::string() +
-			 "create index productdetails_product_idx on productdetails(product_id)");
-
-	try_create(std::string() +
-			 "create type confidence_t as enum ('LOW','NEUTRAL','HIGH', 'PERFECT')");
-
-	try_create(std::string() +
-			 "create table productdetailsrecord (" +
-			 "id serial primary key," +
-			 "productdetails_id int not null," +
-			 "retrieved_on timestamp not null," +
-			 "confidence confidence_t not null default 'LOW'"
-			 ")");
-
-	try_create(std::string() +
-			 "create index productdetailsrecord_productdetails_idx on productdetailsrecord(productdetails_id)");
-
-	try_create(std::string() +
-			 "create table supermarket (" +
-			 "id serial primary key," +
-			 "name varchar(1024) not null"
-			 ")");
+		log("storage::update_database_schema", log::level_e::NOTICE)() << "Updated to schema version " << schema_version;
+	}
 }
+
+#undef ADD_SCHEMA
 
 #define PREPARE_STATEMENT(NAME)\
 	conn.prepare(conv(statement::NAME), std::string((char*) sql_ ## NAME, sql_ ## NAME ## _len));
