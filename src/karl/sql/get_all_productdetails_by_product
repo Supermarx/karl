@@ -1,1 +1,19 @@
-select productdetails.id, product.identifier, productdetails.name, productdetails.orig_price, productdetails.price, productdetails.discount_amount, productdetails.valid_on, productdetailsrecord.retrieved_on from product inner join productdetails on (product.id = productdetails.product_id) inner join productdetailsrecord on (productdetails.id = productdetailsrecord.productdetails_id) where productdetails.product_id = $1 order by productdetailsrecord.id asc
+select
+	productdetails.id,
+	product.identifier,
+	productdetails.volume,
+	productdetails.volume_measure,
+	productdetails.name,
+	productdetails.orig_price,
+	productdetails.price,
+	productdetails.discount_amount,
+	productdetails.valid_on,
+	productdetailsrecord.retrieved_on
+from
+	product
+		inner join productdetails on (product.id = productdetails.product_id)
+		inner join productdetailsrecord on (productdetails.id = productdetailsrecord.productdetails_id)
+where
+	productdetails.product_id = $1
+order by
+	productdetailsrecord.id asc

@@ -1,0 +1,43 @@
+create type measure_t as enum ('UNITS', 'MILLILITERS', 'MILLIGRAMS', 'MILLIMETERS');
+
+alter table productdetails
+	add column volume int not null default 1,
+	add column volume_measure measure_t not null default 'UNITS';
+
+alter table productdetails
+	add column t_orig_price int,
+	add column t_price int,
+	add column t_discount_amount int,
+	add column t_valid_on timestamp,
+	add column t_valid_until timestamp,
+	add column t_retrieved_on timestamp;
+
+update productdetails set
+	t_orig_price = orig_price,
+	t_price = price,
+	t_discount_amount = discount_amount,
+	t_valid_on = valid_on,
+	t_valid_until = valid_until,
+	t_retrieved_on = retrieved_on;
+
+alter table productdetails
+	drop column orig_price,
+	drop column price,
+	drop column discount_amount,
+	drop column valid_on,
+	drop column valid_until,
+	drop column retrieved_on;
+
+alter table productdetails rename column t_orig_price to orig_price;
+alter table productdetails rename column t_price to price;
+alter table productdetails rename column t_discount_amount to discount_amount;
+alter table productdetails rename column t_valid_on to valid_on;
+alter table productdetails rename column t_valid_until to valid_until;
+alter table productdetails rename column t_retrieved_on to retrieved_on;
+
+alter table productdetails
+	alter column orig_price set not null,
+	alter column price set not null,
+	alter column discount_amount set not null,
+	alter column valid_on set not null,
+	alter column retrieved_on set not null;

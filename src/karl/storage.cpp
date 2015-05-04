@@ -46,12 +46,20 @@ void rcol<datetime>(pqxx::result::tuple& row, datetime& rhs, std::string const& 
 	rhs = to_datetime(row[key].as<std::string>());
 }
 
+template<>
+void rcol<measure>(pqxx::result::tuple& row, measure& rhs, std::string const& key)
+{
+	rhs = to_measure(row[key].as<std::string>());
+}
+
 #define rcoladv(row, p, col) { rcol(row, p.col, #col); }
 
 void read_product(pqxx::result::tuple& row, product& p)
 {
 	rcoladv(row, p, identifier);
 	rcoladv(row, p, name);
+	rcoladv(row, p, volume);
+	rcoladv(row, p, volume_measure);
 	rcoladv(row, p, orig_price);
 	rcoladv(row, p, price);
 	rcoladv(row, p, valid_on);
@@ -172,6 +180,8 @@ void storage::add_product(product const& p, id_t supermarket_id, datetime retrie
 	{
 		product const& p_old = p_old_opt_kvp->second;
 		bool similar = (
+			p.volume == p_old.volume &&
+			p.volume_measure == p_old.volume_measure &&
 			p.discount_amount == p_old.discount_amount &&
 			p.name == p_old.name &&
 			p.orig_price == p_old.orig_price &&
@@ -194,7 +204,8 @@ void storage::add_product(product const& p, id_t supermarket_id, datetime retrie
 
 	//TODO check if a newer entry is already entered. Perhaps invalidate that entry in such a case.
 	pqxx::result result = txn.prepared(conv(statement::add_productdetails))
-			(product_id)(p.name)(p.orig_price)(p.price)
+			(product_id)(p.name)(p.volume)(to_string(p.volume_measure))
+			(p.orig_price)(p.price)
 			(p.discount_amount)(to_string(p.valid_on))
 			(to_string(retrieved_on)).exec();
 
@@ -263,8 +274,9 @@ void storage::update_database_schema()
 {
 	std::map<unsigned int, std::string> schema_queries;
 	ADD_SCHEMA(1);
+	ADD_SCHEMA(2);
 
-	const size_t target_schema_version = 1;
+	const size_t target_schema_version = 2;
 
 	unsigned int schema_version = 0;
 	try
@@ -317,6 +329,8 @@ void storage::update_database_schema()
 
 		log("storage::update_database_schema", log::level_e::NOTICE)() << "Updated to schema version " << schema_version;
 	}
+
+	log("storage::update_database_schema", log::level_e::NOTICE)() << "Storage engine started for schema version " << schema_version;
 }
 
 #undef ADD_SCHEMA

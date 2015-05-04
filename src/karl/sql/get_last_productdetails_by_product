@@ -1,1 +1,15 @@
-select productdetails.id, product.identifier, productdetails.name, productdetails.orig_price, productdetails.price, productdetails.discount_amount, productdetails.valid_on, productdetails.retrieved_on from product inner join productdetails on (product.id = productdetails.product_id) where productdetails.product_id = $1 AND productdetails.valid_until is NULL
+select productdetails.id,
+	product.identifier,
+	productdetails.name,
+	productdetails.volume,
+	productdetails.volume_measure,
+	productdetails.orig_price,
+	productdetails.price,
+	productdetails.discount_amount,
+	productdetails.valid_on,
+	productdetails.retrieved_on
+from product
+	inner join productdetails on (product.id = productdetails.product_id)
+where
+	productdetails.product_id = $1 and
+	productdetails.valid_until is null
