@@ -1,0 +1,8 @@
+insert into
+	productlog (
+		productdetailsrecord_id,
+		description
+	)
+values (
+	$1, $2
+)

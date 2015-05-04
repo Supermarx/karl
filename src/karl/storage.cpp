@@ -16,6 +16,7 @@ enum class statement : uint8_t
 
 	add_productdetails,
 	add_productdetailsrecord,
+	add_productlog,
 
 	get_all_productdetails_by_product,
 	get_last_productdetails_by_product,
@@ -160,15 +161,23 @@ id_t find_add_product(pqxx::connection& conn, std::string const& identifier, id_
 	}
 }
 
-void register_productdetailsrecord(pqxx::transaction_base& txn, id_t productdetails_id, datetime retrieved_on, confidence conf)
+void register_productdetailsrecord(pqxx::transaction_base& txn, id_t productdetails_id, datetime retrieved_on, confidence conf, std::vector<std::string> const& problems)
 {
-	txn.prepared(conv(statement::add_productdetailsrecord))
+	pqxx::result result = txn.prepared(conv(statement::add_productdetailsrecord))
 			(productdetails_id)
 			(to_string(retrieved_on))
 			(to_string(conf)).exec();
+
+	size_t id = read_id(result);
+	for(std::string p : problems)
+	{
+		txn.prepared(conv(statement::add_productlog))
+				(id)
+				(p).exec();
+	}
 }
 
-void storage::add_product(product const& p, id_t supermarket_id, datetime retrieved_on, confidence conf)
+void storage::add_product(product const& p, id_t supermarket_id, datetime retrieved_on, confidence conf, std::vector<std::string> const& problems)
 {
 	id_t product_id = find_add_product(conn, p.identifier, supermarket_id);
 
@@ -190,7 +199,7 @@ void storage::add_product(product const& p, id_t supermarket_id, datetime retrie
 
 		if(similar)
 		{
-			register_productdetailsrecord(txn, p_old_opt_kvp->first, retrieved_on, conf);
+			register_productdetailsrecord(txn, p_old_opt_kvp->first, retrieved_on, conf, problems);
 			txn.commit();
 			return;
 		}
@@ -212,7 +221,7 @@ void storage::add_product(product const& p, id_t supermarket_id, datetime retrie
 	id_t productdetails_id = read_id(result);
 	log("storage::storage", log::level_e::NOTICE)() << "Inserted new productdetails " << productdetails_id << " for product " << p.identifier << " [" << product_id << ']';
 
-	register_productdetailsrecord(txn, productdetails_id, retrieved_on, conf);
+	register_productdetailsrecord(txn, productdetails_id, retrieved_on, conf, problems);
 	txn.commit();
 }
 
@@ -275,8 +284,9 @@ void storage::update_database_schema()
 	std::map<unsigned int, std::string> schema_queries;
 	ADD_SCHEMA(1);
 	ADD_SCHEMA(2);
+	ADD_SCHEMA(3);
 
-	const size_t target_schema_version = 2;
+	const size_t target_schema_version = 3;
 
 	unsigned int schema_version = 0;
 	try
@@ -310,6 +320,8 @@ void storage::update_database_schema()
 	{
 		schema_version++;
 
+		log("storage::update_database_schema", log::level_e::NOTICE)() << "Upgrading to schema version " << schema_version;
+
 		pqxx::work txn(conn);
 		auto pair_it = schema_queries.find(schema_version);
 
@@ -340,12 +352,12 @@ void storage::update_database_schema()
 
 void storage::prepare_statements()
 {
-	PREPARE_STATEMENT(add_productdetails)
-
 	PREPARE_STATEMENT(add_product)
 	PREPARE_STATEMENT(get_product_by_identifier)
 
+	PREPARE_STATEMENT(add_productdetails)
 	PREPARE_STATEMENT(add_productdetailsrecord)
+	PREPARE_STATEMENT(add_productlog)
 
 	PREPARE_STATEMENT(get_all_productdetails_by_product)
 	PREPARE_STATEMENT(get_last_productdetails_by_product)

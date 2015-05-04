@@ -144,7 +144,7 @@ bool process(request& r, response_handler::serializer_ptr& s, karl& k, const uri
 		id_t supermarket_id = boost::lexical_cast<id_t>(u.path[1]);
 		api::add_product request = deserialize_payload<api::add_product>(r, "addproduct");
 
-		k.add_product(request.p, supermarket_id, request.retrieved_on, request.c);
+		k.add_product(request.p, supermarket_id, request.retrieved_on, request.c, request.problems);
 		s->write_object("response", 1);
 		s->write("status", std::string("done"));
 		return true;

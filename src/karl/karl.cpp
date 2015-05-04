@@ -19,9 +19,9 @@ namespace supermarx {
 		return backend.get_product_summary(identifier, supermarket_id);
 	}
 
-	void karl::add_product(product const& product, id_t supermarket_id, datetime retrieved_on, confidence conf)
+	void karl::add_product(product const& product, id_t supermarket_id, datetime retrieved_on, confidence conf, std::vector<std::string> const& problems)
 	{
 		log("karl::karl", log::level_e::DEBUG)() << "Received product " << product.name << " [" << supermarket_id << "] [" << product.identifier << "]";
-		backend.add_product(product, supermarket_id, retrieved_on, conf);
+		backend.add_product(product, supermarket_id, retrieved_on, conf, problems);
 	}
 }
