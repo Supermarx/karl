@@ -10,9 +10,9 @@
 namespace supermarx
 {
 
-fcgi_request::fcgi_request(karl& k)
+fcgi_request::fcgi_request(karl& _k)
 	: Request()
-	, k(k)
+	, k(_k)
 {}
 
 bool fcgi_request::response()

@@ -7,8 +7,8 @@
 namespace supermarx
 {
 
-api_server::api_server(karl &k)
-	: k(k)
+api_server::api_server(karl &_k)
+	: k(_k)
 {}
 
 void api_server::run()

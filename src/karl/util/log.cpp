@@ -6,9 +6,9 @@
 namespace supermarx
 {
 
-log::log(const std::string& facility, const level_e l)
-	: facility(facility)
-	, l(l)
+log::log(const std::string& _facility, const level_e _l)
+	: facility(_facility)
+	, l(_l)
 	, os()
 {}
 
