@@ -16,7 +16,8 @@
 #include <karl/api/uri.hpp>
 
 #include <karl/util/log.hpp>
-#include <karl/util/guard.hpp>
+
+#include <supermarx/util/guard.hpp>
 
 namespace supermarx
 {
