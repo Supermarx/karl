@@ -2,7 +2,7 @@
 
 #include <fstream>
 #include <iostream>
-#include <ImageMagick/Magick++.h>
+#include <Magick++.h>
 #include <boost/lexical_cast.hpp>
 
 namespace supermarx
