@@ -1,0 +1,11 @@
+insert into
+	imagecitation (
+		supermarket_id,
+		original_uri,
+		source_uri,
+		original_width,
+		original_height,
+		retrieved_on
+	)
+values ($1, $2, $3, $4, $5, $6)
+returning id

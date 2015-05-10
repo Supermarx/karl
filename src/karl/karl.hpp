@@ -6,6 +6,7 @@
 #include <supermarx/product.hpp>
 
 #include <karl/storage.hpp>
+#include <karl/image_citations.hpp>
 
 namespace supermarx
 {
@@ -15,13 +16,16 @@ namespace supermarx
 	class karl
 	{
 	public:
-		karl(std::string const& host, std::string const& user, std::string const& password, const std::string& db);
+		karl(std::string const& host, std::string const& user, std::string const& password, const std::string& db, const std::string& imagecitation_path);
 
-		std::vector<product> get_products(std::string const& name, id_t supermarket_id);
-		boost::optional<api::product_summary> get_product_summary(std::string const& identifier, id_t supermarket_id);
+		api::product_summary get_product(std::string const& identifier, id_t supermarket_id);
+		std::vector<api::product_summary> get_products(std::string const& name, id_t supermarket_id);
+		api::product_history get_product_history(std::string const& identifier, id_t supermarket_id);
 		void add_product(product const&, id_t supermarket_id, datetime retrieved_on, confidence conf, std::vector<std::string> const& problems);
+		void add_product_image_citation(id_t supermarket_id, std::string const& product_identifier, std::string const& original_uri, std::string const& source_uri, const datetime &retrieved_on, raw const& image);
 
 	private:
 		storage backend;
+		image_citations ic;
 	};
 }

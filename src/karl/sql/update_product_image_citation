@@ -1,0 +1,7 @@
+update
+	product
+set
+	imagecitation_id = $1
+where
+	identifier = $2 and
+	supermarket_id = $3

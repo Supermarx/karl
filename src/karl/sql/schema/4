@@ -1,0 +1,11 @@
+create table imagecitation (
+	id serial primary key,
+	supermarket_id int not null,
+	original_uri varchar not null,
+	source_uri varchar not null,
+	original_width int not null,
+	original_height int not null,
+	retrieved_on timestamp not null
+);
+
+alter table product add column imagecitation_id int;

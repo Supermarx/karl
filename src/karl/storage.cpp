@@ -9,6 +9,10 @@
 namespace supermarx
 {
 
+storage::not_found_error::not_found_error()
+: std::runtime_error("Row could not be found")
+{}
+
 enum class statement : uint8_t
 {
 	add_product,
@@ -17,6 +21,9 @@ enum class statement : uint8_t
 	add_productdetails,
 	add_productdetailsrecord,
 	add_productlog,
+
+	add_imagecitation,
+	update_product_image_citation,
 
 	get_all_productdetails_by_product,
 	get_last_productdetails_by_product,
@@ -30,32 +37,57 @@ std::string conv(statement rhs)
 }
 
 template<typename T>
-void rcol(pqxx::result::tuple& row, T& rhs, std::string const& key)
+struct rcol
 {
-	rhs = row[key].as<T>();
-}
+	static inline void exec(pqxx::result::tuple& row, T& rhs, std::string const& key)
+	{
+		rhs = row[key].as<T>();
+	}
+};
+
+template<typename T>
+struct rcol<boost::optional<T>>
+{
+	static inline void exec(pqxx::result::tuple& row, boost::optional<T>& rhs, std::string const& key)
+	{
+		if(row[key].is_null())
+			rhs = boost::none;
+		else
+			rhs = row[key].as<T>();
+	}
+};
 
 template<>
-void rcol<date>(pqxx::result::tuple& row, date& rhs, std::string const& key)
+struct rcol<date>
 {
-	rhs = to_date(row[key].as<std::string>());
-}
+	static inline void exec(pqxx::result::tuple& row, date& rhs, std::string const& key)
+	{
+		rhs = to_date(row[key].as<std::string>());
+	}
+};
 
 template<>
-void rcol<datetime>(pqxx::result::tuple& row, datetime& rhs, std::string const& key)
+struct rcol<datetime>
 {
-	rhs = to_datetime(row[key].as<std::string>());
-}
+	static inline void exec(pqxx::result::tuple& row, datetime& rhs, std::string const& key)
+	{
+		rhs = to_datetime(row[key].as<std::string>());
+	}
+};
 
 template<>
-void rcol<measure>(pqxx::result::tuple& row, measure& rhs, std::string const& key)
+struct rcol<measure>
 {
-	rhs = to_measure(row[key].as<std::string>());
-}
+	static inline void exec(pqxx::result::tuple& row, measure& rhs, std::string const& key)
+	{
+		rhs = to_measure(row[key].as<std::string>());
+	}
+};
 
-#define rcoladv(row, p, col) { rcol(row, p.col, #col); }
+#define rcoladv(row, p, col) { rcol<decltype(p.col)>::exec(row, p.col, #col); }
 
-void read_product(pqxx::result::tuple& row, product& p)
+template<typename P>
+void read_product(pqxx::result::tuple& row, P& p)
 {
 	rcoladv(row, p, identifier);
 	rcoladv(row, p, name);
@@ -65,6 +97,13 @@ void read_product(pqxx::result::tuple& row, product& p)
 	rcoladv(row, p, price);
 	rcoladv(row, p, valid_on);
 	rcoladv(row, p, discount_amount);
+}
+
+void read_product_summary(pqxx::result::tuple& row, api::product_summary& p)
+{
+	read_product(row, p);
+
+	rcoladv(row, p, imagecitation_id);
 }
 
 #undef rcoladv
@@ -115,15 +154,15 @@ boost::optional<id_t> find_product_unsafe(pqxx::transaction_base& txn, std::stri
 	return boost::none;
 }
 
-boost::optional<std::pair<id_t, product>> fetch_last_productdetails_unsafe(pqxx::transaction_base& txn, id_t product_id)
+boost::optional<std::pair<id_t, api::product_summary>> fetch_last_productdetails_unsafe(pqxx::transaction_base& txn, id_t product_id)
 {
 	pqxx::result result = txn.prepared(conv(statement::get_last_productdetails_by_product))
 			(product_id).exec();
 
 	for(auto row : result)
 	{
-		product p;
-		read_product(row, p);
+		api::product_summary p;
+		read_product_summary(row, p);
 
 		return std::make_pair(row["id"].as<id_t>(), p);
 	}
@@ -187,7 +226,7 @@ void storage::add_product(product const& p, id_t supermarket_id, datetime retrie
 	auto p_old_opt_kvp = fetch_last_productdetails_unsafe(txn, product_id);
 	if(p_old_opt_kvp)
 	{
-		product const& p_old = p_old_opt_kvp->second;
+		api::product_summary const& p_old = p_old_opt_kvp->second;
 		bool similar = (
 			p.volume == p_old.volume &&
 			p.volume_measure == p_old.volume_measure &&
@@ -225,16 +264,33 @@ void storage::add_product(product const& p, id_t supermarket_id, datetime retrie
 	txn.commit();
 }
 
-boost::optional<api::product_summary> storage::get_product_summary(std::string const& identifier, id_t supermarket_id)
+api::product_summary storage::get_product(const std::string &identifier, id_t supermarket_id)
+{
+	pqxx::work txn(conn);
+
+	lock_products_read(txn);
+
+	auto product_id_opt = find_product_unsafe(txn, identifier, supermarket_id);
+	if(!product_id_opt)
+		throw storage::not_found_error();
+
+	auto productdetails_opt_kvp = fetch_last_productdetails_unsafe(txn, *product_id_opt);
+	if(!productdetails_opt_kvp)
+		throw std::logic_error(std::string("Inconsistency: found product ") + boost::lexical_cast<std::string>(*product_id_opt) + " but has no (latest) productdetails entry");
+
+	return productdetails_opt_kvp->second;
+}
+
+api::product_history storage::get_product_history(std::string const& identifier, id_t supermarket_id)
 {
 	pqxx::work txn(conn);
 
 	auto product_id_opt = find_product_unsafe(txn, identifier, supermarket_id);
 	if(!product_id_opt)
-		return boost::none;
+		throw storage::not_found_error();
 
-	api::product_summary summary;
-	summary.identifier = identifier;
+	api::product_history history;
+	history.identifier = identifier;
 
 	pqxx::result result = txn.prepared(conv(statement::get_all_productdetails_by_product))
 			(*product_id_opt).exec();
@@ -250,14 +306,14 @@ boost::optional<api::product_summary> storage::get_product_summary(std::string c
 		if(valid_on < retrieved_on)
 			valid_on = retrieved_on;
 
-		summary.name = p.name; // Last set will be used
-		summary.pricehistory.emplace_back(valid_on, p.price);
+		history.name = p.name; // Last set will be used
+		history.pricehistory.emplace_back(valid_on, p.price);
 	}
 
-	return summary;
+	return history;
 }
 
-std::vector<product> storage::get_products_by_name(std::string const& name, id_t supermarket_id)
+std::vector<api::product_summary> storage::get_products_by_name(std::string const& name, id_t supermarket_id)
 {
 	pqxx::work txn(conn);
 
@@ -265,15 +321,44 @@ std::vector<product> storage::get_products_by_name(std::string const& name, id_t
 			(std::string("%") + name + "%")
 			(supermarket_id).exec();
 
-	std::vector<product> products;
+	std::vector<api::product_summary> products;
 	for(auto row : result)
 	{
-		product p;
-		read_product(row, p);
+		api::product_summary p;
+		read_product_summary(row, p);
 		products.emplace_back(p);
 	}
 
 	return products;
+}
+
+id_t storage::add_image_citation(id_t supermarket_id, const std::string &original_uri, const std::string &source_uri, size_t original_width, size_t original_height, const datetime &retrieved_on)
+{
+	pqxx::work txn(conn);
+
+	pqxx::result result = txn.prepared(conv(statement::add_imagecitation))
+			(supermarket_id)
+			(original_uri)
+			(source_uri)
+			(original_width)
+			(original_height)
+			(to_string(retrieved_on)).exec();
+
+	id_t id = read_id(result);
+	txn.commit();
+	return id;
+}
+
+void storage::update_product_image_citation(const std::string &product_identifier, id_t supermarket_id, id_t image_citation_id)
+{
+	pqxx::work txn(conn);
+
+	pqxx::result result = txn.prepared(conv(statement::update_product_image_citation))
+			(image_citation_id)
+			(product_identifier)
+			(supermarket_id).exec();
+
+	txn.commit();
 }
 
 #define ADD_SCHEMA(ID)\
@@ -285,8 +370,9 @@ void storage::update_database_schema()
 	ADD_SCHEMA(1);
 	ADD_SCHEMA(2);
 	ADD_SCHEMA(3);
+	ADD_SCHEMA(4);
 
-	const size_t target_schema_version = 3;
+	const size_t target_schema_version = 4;
 
 	unsigned int schema_version = 0;
 	try
@@ -358,6 +444,9 @@ void storage::prepare_statements()
 	PREPARE_STATEMENT(add_productdetails)
 	PREPARE_STATEMENT(add_productdetailsrecord)
 	PREPARE_STATEMENT(add_productlog)
+
+	PREPARE_STATEMENT(add_imagecitation)
+	PREPARE_STATEMENT(update_product_image_citation);
 
 	PREPARE_STATEMENT(get_all_productdetails_by_product)
 	PREPARE_STATEMENT(get_last_productdetails_by_product)

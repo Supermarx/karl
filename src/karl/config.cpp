@@ -15,6 +15,10 @@ config::config(std::string const& filename)
 	db_user = db["user"].as<std::string>();
 	db_password = db["password"].as<std::string>();
 	db_database = db["database"].as<std::string>();
+
+	const YAML::Node& ic = doc["imagecitations"];
+
+	ic_path = ic["path"].as<std::string>();
 }
 
 }

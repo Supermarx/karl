@@ -11,6 +11,7 @@
 #include <supermarx/serialization/deserialize_fusion.hpp>
 
 #include <supermarx/api/add_product.hpp>
+#include <supermarx/api/add_product_image_citation.hpp>
 
 #include <karl/api/api_exception.hpp>
 #include <karl/api/uri.hpp>
@@ -125,6 +126,18 @@ void package(response_handler::serializer_ptr& s, const T& x, const std::string&
 
 bool process(request& r, response_handler::serializer_ptr& s, karl& k, const uri& u)
 {
+	if(u.match_path(0, "get_product"))
+	{
+		if(u.path.size() != 3)
+			return false;
+
+		id_t supermarket_id = boost::lexical_cast<id_t>(u.path[1]);
+		std::string identifier = u.path[2];
+
+		serialize(s, "product_summary", k.get_product(identifier, supermarket_id));
+		return true;
+	}
+
 	if(u.match_path(0, "find_products"))
 	{
 		if(u.path.size() != 3)
@@ -143,7 +156,7 @@ bool process(request& r, response_handler::serializer_ptr& s, karl& k, const uri
 			return false;
 
 		id_t supermarket_id = boost::lexical_cast<id_t>(u.path[1]);
-		api::add_product request = deserialize_payload<api::add_product>(r, "addproduct");
+		api::add_product request = deserialize_payload<api::add_product>(r, "add_product");
 
 		k.add_product(request.p, supermarket_id, request.retrieved_on, request.c, request.problems);
 		s->write_object("response", 1);
@@ -151,7 +164,23 @@ bool process(request& r, response_handler::serializer_ptr& s, karl& k, const uri
 		return true;
 	}
 
-	if(u.match_path(0, "get_product_summary"))
+	if(u.match_path(0, "add_product_image_citation"))
+	{
+		if(u.path.size() != 3)
+			return false;
+
+		id_t supermarket_id = boost::lexical_cast<id_t>(u.path[1]);
+		std::string product_identifier = u.path[2];
+
+		api::add_product_image_citation request = deserialize_payload<api::add_product_image_citation>(r, "add_product_image_citation");
+
+		k.add_product_image_citation(supermarket_id, product_identifier, request.original_uri, request.source_uri, request.retrieved_on, request.image);
+		s->write_object("response", 1);
+		s->write("status", std::string("done"));
+		return true;
+	}
+
+	if(u.match_path(0, "get_product_history"))
 	{
 		if(u.path.size() != 3)
 			return false;
@@ -159,11 +188,14 @@ bool process(request& r, response_handler::serializer_ptr& s, karl& k, const uri
 		id_t supermarket_id = boost::lexical_cast<id_t>(u.path[1]);
 		std::string identifier = u.path[2];
 
-		auto p_opt = k.get_product_summary(identifier, supermarket_id);
-		if(!p_opt)
+		try
+		{
+			serialize(s, "product_history", k.get_product_history(identifier, supermarket_id));
+		} catch(storage::not_found_error)
+		{
 			throw api_exception::product_not_found;
+		}
 
-		serialize(s, "product_summary", *p_opt);
 		return true;
 	}
 

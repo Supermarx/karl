@@ -22,7 +22,7 @@
 int main()
 {
 	supermarx::config c("config.yaml");
-	supermarx::karl karl(c.db_host, c.db_user, c.db_password, c.db_database);
+	supermarx::karl karl(c.db_host, c.db_user, c.db_password, c.db_database, c.ic_path);
 
 	supermarx::api_server as(karl);
 	as.run();
