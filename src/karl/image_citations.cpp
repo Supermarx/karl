@@ -3,6 +3,8 @@
 #include <fstream>
 #include <iostream>
 #include <Magick++.h>
+
+#include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
 
 namespace supermarx
@@ -18,6 +20,10 @@ image_citations::image_citations(std::string const& _path)
 		Magick::InitializeMagick(NULL);
 		initialized = true;
 	}
+
+	boost::filesystem::path p(path);
+	if(!boost::filesystem::is_directory(p))
+		throw std::runtime_error("Image citations path does not exist");
 }
 
 std::pair<size_t, size_t> image_citations::get_size(const raw &_r) const
@@ -38,11 +44,16 @@ void image_citations::commit(id_t id, const raw &_r, std::pair<size_t, size_t> c
 	Magick::Image img;
 	img.read(img_blob);
 
-	img.write(path+boost::lexical_cast<std::string>(id)+"_orig.png");
+	boost::filesystem::path p(path);
+	std::string id_str(boost::lexical_cast<std::string>(id));
+
+	auto p_orig = p / (id_str+"_orig.png");
+	img.write(p_orig.string());
 
 	img.resize(boost::lexical_cast<std::string>(new_geo.first) + "x" + boost::lexical_cast<std::string>(new_geo.second));
 
-	img.write(path+boost::lexical_cast<std::string>(id)+".png");
+	auto p_thumb = p / (id_str+".png");
+	img.write(p_thumb.string());
 }
 
 }

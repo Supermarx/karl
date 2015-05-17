@@ -6,7 +6,7 @@ list(APPEND Karl_INCLUDE_DIRS ${SuperMarx_INCLUDE_DIRS})
 # find_package(librusql REQUIRED)
 list(APPEND Karl_INCLUDE_DIRS ${librusql_INCLUDE_DIRS})
 
-find_package(Boost COMPONENTS system program_options regex chrono date_time thread REQUIRED)
+find_package(Boost COMPONENTS system program_options regex chrono date_time thread filesystem REQUIRED)
 
 find_package(yaml-cpp REQUIRED)
 list(APPEND Karl_INCLUDE_DIRS ${yaml-cpp_INCLUDE_DIRS})
