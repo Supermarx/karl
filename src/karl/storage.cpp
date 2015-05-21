@@ -28,7 +28,9 @@ enum class statement : uint8_t
 	get_all_productdetails_by_product,
 	get_last_productdetails_by_product,
 	get_last_productdetails_by_name,
-	invalidate_productdetails
+	invalidate_productdetails,
+
+	get_recent_productlog
 };
 
 std::string conv(statement rhs)
@@ -332,6 +334,43 @@ std::vector<api::product_summary> storage::get_products_by_name(std::string cons
 	return products;
 }
 
+std::vector<api::product_log> storage::get_recent_productlog(id_t supermarket_id)
+{
+	pqxx::work txn(conn);
+
+	pqxx::result result = txn.prepared(conv(statement::get_recent_productlog))
+			(supermarket_id).exec();
+
+	std::map<std::string, api::product_log> log_map;
+
+	for(auto row : result)
+	{
+		std::string identifier(row["identifier"].as<std::string>());
+		std::string message(row["description"].as<std::string>());
+
+		auto it = log_map.find(identifier);
+		if(it == log_map.end())
+		{
+			api::product_log pl;
+			pl.identifier = identifier;
+			pl.name = row["name"].as<std::string>();
+			pl.messages.emplace_back(message);
+
+			log_map.insert(std::make_pair(identifier, pl));
+		}
+		else
+		{
+			it->second.messages.emplace_back(message);
+		}
+	}
+
+	std::vector<api::product_log> log;
+	for(auto& p : log_map)
+		log.emplace_back(p.second);
+
+	return log;
+}
+
 id_t storage::add_image_citation(id_t supermarket_id, const std::string &original_uri, const std::string &source_uri, size_t original_width, size_t original_height, const datetime &retrieved_on)
 {
 	pqxx::work txn(conn);
@@ -452,6 +491,8 @@ void storage::prepare_statements()
 	PREPARE_STATEMENT(get_last_productdetails_by_product)
 	PREPARE_STATEMENT(get_last_productdetails_by_name)
 	PREPARE_STATEMENT(invalidate_productdetails)
+
+	PREPARE_STATEMENT(get_recent_productlog)
 }
 
 #undef PREPARE_STATEMENT

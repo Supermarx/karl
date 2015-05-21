@@ -1,0 +1,13 @@
+select distinct
+	product.identifier,
+	productdetails.name,
+	productlog.description
+from
+	product
+		inner join productdetails on (productdetails.product_id = product.id)
+		inner join productdetailsrecord on (productdetailsrecord.productdetails_id = productdetails.id)
+		inner join productlog on (productlog.productdetailsrecord_id = productdetailsrecord.id)
+where
+	product.supermarket_id = $1 and
+	productdetails.valid_until is null and
+	productdetailsrecord.id in (select max(pdr2.id) from productdetailsrecord as pdr2 group by pdr2.productdetails_id)

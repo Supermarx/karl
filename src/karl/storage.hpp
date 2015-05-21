@@ -8,6 +8,7 @@
 #include <supermarx/product.hpp>
 #include <supermarx/api/product_summary.hpp>
 #include <supermarx/api/product_history.hpp>
+#include <supermarx/api/product_log.hpp>
 
 namespace supermarx
 {
@@ -30,6 +31,7 @@ public:
 	void add_product(product const& p, id_t supermarket_id, datetime retrieved_on, confidence conf, std::vector<std::string> const& problems);
 	api::product_summary get_product(std::string const& identifier, id_t supermarket_id);
 	std::vector<api::product_summary> get_products_by_name(std::string const& name, id_t supermarket_id);
+	std::vector<api::product_log> get_recent_productlog(id_t supermarket_id);
 	api::product_history get_product_history(std::string const& identifier, id_t supermarket_id);
 
 	id_t add_image_citation(id_t supermarket_id, std::string const& original_uri, std::string const& source_uri, size_t original_width, size_t original_height, datetime const& retrieved_on);

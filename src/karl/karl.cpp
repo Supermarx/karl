@@ -25,6 +25,11 @@ namespace supermarx {
 		return backend.get_product_history(identifier, supermarket_id);
 	}
 
+	std::vector<api::product_log> karl::get_recent_productlog(id_t supermarket_id)
+	{
+		return backend.get_recent_productlog(supermarket_id);
+	}
+
 	void karl::add_product(product const& product, id_t supermarket_id, datetime retrieved_on, confidence conf, std::vector<std::string> const& problems)
 	{
 		log("karl::karl", log::level_e::DEBUG)() << "Received product " << product.name << " [" << supermarket_id << "] [" << product.identifier << "]";

@@ -31,7 +31,7 @@ void init_serializer(request& r, response_handler::serializer_ptr& s)
 		if(s == nullptr)
 		{
 			s.reset(new xml_serializer());
-			r.write_header("Content-Type", "application/xml");
+			r.write_header("Content-Type", "application/xml; charset=UTF-8");
 		}
 	});
 
@@ -39,12 +39,12 @@ void init_serializer(request& r, response_handler::serializer_ptr& s)
 	if(format == r.env().gets.end() || format->second == "xml")
 	{
 		s.reset(new xml_serializer());
-		r.write_header("Content-Type", "application/xml");
+		r.write_header("Content-Type", "application/xml; charset=UTF-8");
 	}
 	else if(format->second == "json")
 	{
 		s.reset(new json_serializer());
-		r.write_header("Content-Type", "application/json");
+		r.write_header("Content-Type", "application/json; charset=UTF-8");
 	}
 	else if(format->second == "msgpack")
 		s.reset(new msgpack_serializer());
@@ -196,6 +196,17 @@ bool process(request& r, response_handler::serializer_ptr& s, karl& k, const uri
 			throw api_exception::product_not_found;
 		}
 
+		return true;
+	}
+
+	if(u.match_path(0, "get_recent_productlog"))
+	{
+		if(u.path.size() != 2)
+			return false;
+
+		id_t supermarket_id = boost::lexical_cast<id_t>(u.path[1]);
+
+		serialize(s, "products", k.get_recent_productlog(supermarket_id));
 		return true;
 	}
 

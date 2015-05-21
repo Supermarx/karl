@@ -21,6 +21,7 @@ namespace supermarx
 		api::product_summary get_product(std::string const& identifier, id_t supermarket_id);
 		std::vector<api::product_summary> get_products(std::string const& name, id_t supermarket_id);
 		api::product_history get_product_history(std::string const& identifier, id_t supermarket_id);
+		std::vector<api::product_log> get_recent_productlog(id_t supermarket_id);
 		void add_product(product const&, id_t supermarket_id, datetime retrieved_on, confidence conf, std::vector<std::string> const& problems);
 		void add_product_image_citation(id_t supermarket_id, std::string const& product_identifier, std::string const& original_uri, std::string const& source_uri, const datetime &retrieved_on, raw const& image);
 
