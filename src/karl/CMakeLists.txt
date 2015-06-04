@@ -20,6 +20,9 @@ list(APPEND Karl_INCLUDE_DIRS ${pqxx_INCLUDE_DIRS})
 find_package(ImageMagick COMPONENTS Magick++ REQUIRED)
 list(APPEND Karl_INCLUDE_DIRS ${ImageMagick_INCLUDE_DIRS})
 
+find_package(scrypt REQUIRED)
+list(APPEND Karl_INCLUDE_DIRS ${scrypt_INCLUDE_DIRS})
+
 file(GLOB_RECURSE QUERY_FILES RELATIVE ${CMAKE_CURRENT_LIST_DIR} sql/*)              
 xxd_process(Karl_SQL "${CMAKE_CURRENT_BINARY_DIR}/sql.cc" "${QUERY_FILES}" "supermarx")
 include_directories(${CMAKE_CURRENT_BINARY_DIR}) # Include directory where Karl_SQL is generated
@@ -30,6 +33,7 @@ target_link_libraries(karlcore
 	${yaml-cpp_LIBRARIES}
 	${Boost_LIBRARIES}
 	${ImageMagick_LIBRARIES}
+	${scrypt_LIBRARIES}
 	)
 
 add_library(karlapi api/api_server.cpp api/api_exception.cpp api/request.cpp api/uri.cpp api/response_handler.cpp)

@@ -15,6 +15,16 @@ storage::not_found_error::not_found_error()
 
 enum class statement : uint8_t
 {
+	add_karluser,
+	get_karluser,
+	get_karluser_by_name,
+
+	add_sessionticket,
+	get_sessionticket,
+
+	add_session,
+	get_session_by_token,
+
 	add_product,
 	get_product_by_identifier,
 
@@ -86,7 +96,41 @@ struct rcol<measure>
 	}
 };
 
+template<>
+struct rcol<token>
+{
+	static inline void exec(pqxx::result::tuple& row, token& rhs, std::string const& key)
+	{
+		pqxx::binarystring bs(row[key]);
+		if(rhs.size() != bs.size())
+			throw std::runtime_error("Binarystring does not have correct size to fit into token");
+
+		memcpy(rhs.data(), bs.data(), rhs.size());
+	}
+};
+
 #define rcoladv(row, p, col) { rcol<decltype(p.col)>::exec(row, p.col, #col); }
+
+void read_karluser(pqxx::result::tuple& row, karluser& u)
+{
+	rcoladv(row, u, name);
+	rcoladv(row, u, password_salt);
+	rcoladv(row, u, password_hashed);
+}
+
+void read_session(pqxx::result::tuple& row, session& s)
+{
+	rcoladv(row, s, karluser_id);
+	rcoladv(row, s, token);
+	rcoladv(row, s, creation);
+}
+
+void read_sessionticket(pqxx::result::tuple& row, sessionticket& st)
+{
+	rcoladv(row, st, karluser_id);
+	rcoladv(row, st, nonce);
+	rcoladv(row, st, creation);
+}
 
 template<typename P>
 void read_product(pqxx::result::tuple& row, P& p)
@@ -216,6 +260,127 @@ void register_productdetailsrecord(pqxx::transaction_base& txn, id_t productdeta
 				(id)
 				(p).exec();
 	}
+}
+
+id_t storage::add_karluser(karluser const& user)
+{
+	pqxx::work txn(conn);
+
+	pqxx::binarystring pw_salt_bs(user.password_salt.data(), user.password_salt.size());
+	pqxx::binarystring pw_hashed_bs(user.password_hashed.data(), user.password_hashed.size());
+
+	pqxx::result result(txn.prepared(conv(statement::add_karluser))
+		(user.name)(pw_salt_bs)(pw_hashed_bs).exec());
+
+	id_t karluser_id = read_id(result);
+
+	txn.commit();
+
+	return karluser_id;
+}
+
+karluser storage::get_karluser(id_t karluser_id)
+{
+	pqxx::work txn(conn);
+
+	pqxx::result result(txn.prepared(conv(statement::get_karluser))(karluser_id).exec());
+
+	for(auto row : result)
+	{
+		karluser u;
+		read_karluser(row, u);
+		return u;
+	}
+
+	throw storage::not_found_error();
+}
+
+std::pair<id_t, karluser> storage::get_karluser_by_name(const std::string &name)
+{
+	pqxx::work txn(conn);
+
+	pqxx::result result(txn.prepared(conv(statement::get_karluser_by_name))(name).exec());
+
+	for(auto row : result)
+	{
+		karluser u;
+		read_karluser(row, u);
+
+		return std::make_pair(row["id"].as<id_t>(), u);
+	}
+
+	throw storage::not_found_error();
+}
+
+id_t storage::add_sessionticket(sessionticket const& st)
+{
+	pqxx::work txn(conn);
+
+	pqxx::binarystring nonce_bs(st.nonce.data(), st.nonce.size());
+
+	pqxx::result result(txn.prepared(conv(statement::add_sessionticket))
+		(st.karluser_id)
+		(nonce_bs)
+		(to_string(st.creation)).exec());
+
+	id_t sessionticket_id = read_id(result);
+
+	txn.commit();
+
+	return sessionticket_id;
+}
+
+std::pair<id_t, sessionticket> storage::get_sessionticket(id_t sessionticket_id)
+{
+	pqxx::work txn(conn);
+
+	pqxx::result result(txn.prepared(conv(statement::get_sessionticket))(sessionticket_id).exec());
+
+	for(auto row : result)
+	{
+		sessionticket st;
+		read_sessionticket(row, st);
+
+		return std::make_pair(row["id"].as<id_t>(), st);
+	}
+
+	throw storage::not_found_error();
+}
+
+id_t storage::add_session(session const& s)
+{
+	pqxx::work txn(conn);
+
+	pqxx::binarystring token_bs(s.token.data(), s.token.size());
+
+	pqxx::result result(txn.prepared(conv(statement::add_session))
+		(s.karluser_id)
+		(token_bs)
+		(to_string(s.creation)).exec());
+
+	id_t session_id = read_id(result);
+
+	txn.commit();
+
+	return session_id;
+}
+
+std::pair<id_t, session> storage::get_session_by_token(const api::sessiontoken &token)
+{
+	pqxx::work txn(conn);
+
+	pqxx::binarystring token_bs(token.data(), token.size());
+	pqxx::result result(txn.prepared(conv(statement::get_session_by_token))(token_bs).exec());
+
+	for(auto row : result)
+	{
+		session s;
+		read_session(row, s);
+
+		return std::make_pair(row["id"].as<id_t>(), s);
+	}
+
+	throw storage::not_found_error();
 }
 
 void storage::add_product(product const& p, id_t supermarket_id, datetime retrieved_on, confidence conf, std::vector<std::string> const& problems)
@@ -410,8 +575,9 @@ void storage::update_database_schema()
 	ADD_SCHEMA(2);
 	ADD_SCHEMA(3);
 	ADD_SCHEMA(4);
+	ADD_SCHEMA(5);
 
-	const size_t target_schema_version = 4;
+	const size_t target_schema_version = 5;
 
 	unsigned int schema_version = 0;
 	try
@@ -477,6 +643,16 @@ void storage::update_database_schema()
 
 void storage::prepare_statements()
 {
+	PREPARE_STATEMENT(add_karluser)
+	PREPARE_STATEMENT(get_karluser)
+	PREPARE_STATEMENT(get_karluser_by_name)
+
+	PREPARE_STATEMENT(add_sessionticket)
+	PREPARE_STATEMENT(get_sessionticket)
+
+	PREPARE_STATEMENT(add_session)
+	PREPARE_STATEMENT(get_session_by_token)
+
 	PREPARE_STATEMENT(add_product)
 	PREPARE_STATEMENT(get_product_by_identifier)
 

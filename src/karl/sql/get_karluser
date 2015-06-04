@@ -1,0 +1,9 @@
+select
+	karluser.id,
+	karluser.name,
+	karluser.password_salt,
+	karluser.password_hashed
+from
+	karluser
+where
+	karluser.id = $1

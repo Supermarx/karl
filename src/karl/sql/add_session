@@ -1,0 +1,8 @@
+insert into
+	session (
+		karluser_id,
+		token,
+		creation
+	)
+values ($1, $2, $3)
+returning id

@@ -1,0 +1,8 @@
+insert into
+	karluser (
+		name,
+		password_salt,
+		password_hashed
+	)
+values ($1, $2, $3)
+returning id

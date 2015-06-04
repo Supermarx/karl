@@ -5,6 +5,11 @@
 #include <supermarx/id_t.hpp>
 #include <supermarx/product.hpp>
 
+#include <supermarx/api/product_summary.hpp>
+#include <supermarx/api/product_log.hpp>
+#include <supermarx/api/product_history.hpp>
+#include <supermarx/api/session.hpp>
+
 #include <karl/storage.hpp>
 #include <karl/image_citations.hpp>
 
@@ -16,7 +21,14 @@ namespace supermarx
 	class karl
 	{
 	public:
-		karl(std::string const& host, std::string const& user, std::string const& password, const std::string& db, const std::string& imagecitation_path);
+		karl(std::string const& host, std::string const& user, std::string const& password, const std::string& db, const std::string& imagecitation_path, bool check_perms);
+
+		bool check_permissions() const;
+
+		void create_user(std::string const& name, std::string const& password);
+		api::sessionticket generate_sessionticket(std::string const& user);
+		api::sessiontoken create_session(id_t sessionticket_id, token const& ticket_password);
+		void check_session(api::sessiontoken const& token);
 
 		api::product_summary get_product(std::string const& identifier, id_t supermarket_id);
 		std::vector<api::product_summary> get_products(std::string const& name, id_t supermarket_id);
@@ -28,5 +40,6 @@ namespace supermarx
 	private:
 		storage backend;
 		image_citations ic;
+		bool check_perms;
 	};
 }

@@ -124,6 +124,19 @@ void package(response_handler::serializer_ptr& s, const T& x, const std::string&
 	serialize<T>(s, name, x);
 }
 
+void require_permissions(request const& r, karl& k)
+{
+	if(!k.check_permissions())
+		return;
+
+	auto const& stok(r.env().posts.find("sessiontoken"));
+
+	if(stok == r.env().posts.end())
+		throw api_exception::session_expected;
+
+	k.check_session(supermarx::to_token(stok->second.value));
+}
+
 bool process(request& r, response_handler::serializer_ptr& s, karl& k, const uri& u)
 {
 	if(u.match_path(0, "get_product"))
@@ -152,6 +165,8 @@ bool process(request& r, response_handler::serializer_ptr& s, karl& k, const uri
 
 	if(u.match_path(0, "add_product"))
 	{
+		require_permissions(r, k);
+
 		if(u.path.size() != 2)
 			return false;
 
@@ -166,6 +181,8 @@ bool process(request& r, response_handler::serializer_ptr& s, karl& k, const uri
 
 	if(u.match_path(0, "add_product_image_citation"))
 	{
+		require_permissions(r, k);
+
 		if(u.path.size() != 3)
 			return false;
 
@@ -207,6 +224,34 @@ bool process(request& r, response_handler::serializer_ptr& s, karl& k, const uri
 		id_t supermarket_id = boost::lexical_cast<id_t>(u.path[1]);
 
 		serialize(s, "products", k.get_recent_productlog(supermarket_id));
+		return true;
+	}
+
+	if(u.match_path(0, "create_sessionticket"))
+	{
+		if(u.path.size() != 2)
+			return false;
+
+		std::string username = u.path[1];
+		serialize(s, "sessionticket", k.generate_sessionticket(username));
+		return true;
+	}
+
+	if(u.match_path(0, "login"))
+	{
+		if(u.path.size() != 2)
+			return false;
+
+		id_t sessiontoken_id = boost::lexical_cast<id_t>(u.path[1]);
+		auto const& password_hashed_post(r.env().posts.find("password_hashed"));
+
+		if(password_hashed_post == r.env().posts.end())
+			return false;
+
+		token password_hashed(to_token(password_hashed_post->second.value));
+		api::sessiontoken stok(k.create_session(sessiontoken_id, password_hashed));
+
+		serialize(s, "sessiontoken", stok);
 		return true;
 	}
 

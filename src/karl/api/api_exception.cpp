@@ -25,7 +25,7 @@ std::string api_exception_message(api_exception e)
 	case authentication_error:
 		return "Your username or password is invalid; please contact the service provider.";
 	case session_invalid:
-		return "Session is not (yet) authenticated or does not exist (here).";
+		return "Session does not exist (here), or is no longer valid.";
 	}
 }
 

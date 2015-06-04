@@ -1,0 +1,27 @@
+create table karluser (
+	id serial primary key,
+	name varchar not null,
+	password_salt bytea not null,
+	password_hashed bytea not null
+);
+
+create unique index karluser_namex on karluser(name);
+
+create table sessionticket (
+	id serial primary key,
+	karluser_id integer not null,
+	nonce bytea not null,
+	creation timestamp not null
+);
+
+create index sessionticket_karluser_idx on sessionticket(karluser_id);
+
+create table session (
+	id serial primary key,
+	karluser_id integer not null,
+	token bytea not null,
+	creation timestamp not null
+);
+
+create index session_karluser_idx on session(karluser_id);
+create unique index session_tokenx on session(token);
