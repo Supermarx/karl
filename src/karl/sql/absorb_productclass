@@ -1,0 +1,11 @@
+update
+	product
+set
+	product.productclass_id = $2
+where
+	product.productclass_id = $1;
+
+delete
+	productclass
+where
+	productclass.id = $1;

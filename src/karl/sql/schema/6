@@ -1,0 +1,36 @@
+create table productclass (
+	id serial primary key,
+	name varchar not null
+);
+
+alter table product
+	add column productclass_id int references productclass(id);
+
+alter table productclass
+	add column t_product_id int;
+
+insert into productclass (name, t_product_id)
+	select
+		productdetails.name,
+		product.id
+	from
+		product
+			inner join productdetails on (product.id = productdetails.product_id)
+	where
+		productdetails.valid_until is null;
+
+update product
+	set productclass_id = (
+		select
+			productclass.id
+		from
+			productclass
+		where
+			productclass.t_product_id = product.id
+);
+
+alter table productclass
+	drop column t_product_id;
+
+alter table product
+	alter column productclass_id set not null;

@@ -25,6 +25,9 @@ enum class statement : uint8_t
 	add_session,
 	get_session_by_token,
 
+	add_productclass,
+	absorb_productclass,
+
 	add_product,
 	get_product_by_identifier,
 
@@ -216,7 +219,7 @@ boost::optional<std::pair<id_t, api::product_summary>> fetch_last_productdetails
 	return boost::none;
 }
 
-id_t find_add_product(pqxx::connection& conn, std::string const& identifier, id_t supermarket_id)
+id_t find_add_product(pqxx::connection& conn, std::string const& identifier, id_t supermarket_id, std::string const& name)
 {
 	{
 		pqxx::work txn(conn);
@@ -236,13 +239,19 @@ id_t find_add_product(pqxx::connection& conn, std::string const& identifier, id_
 				return product_id.get();
 		}
 
-		pqxx::result result = txn.prepared(conv(statement::add_product))
+		pqxx::result result_productclass = txn.prepared(conv(statement::add_productclass))
+				(name).exec();
+
+		id_t productclass_id = read_id(result_productclass);
+
+		pqxx::result result_product = txn.prepared(conv(statement::add_product))
 				(identifier)
-				(supermarket_id).exec();
+				(supermarket_id)
+				(productclass_id).exec();
 
 		txn.commit();
 
-		return read_id(result);
+		return read_id(result_product);
 	}
 }
 
@@ -385,7 +394,7 @@ std::pair<id_t, session> storage::get_session_by_token(const api::sessiontoken &
 
 void storage::add_product(product const& p, id_t supermarket_id, datetime retrieved_on, confidence conf, std::vector<std::string> const& problems)
 {
-	id_t product_id = find_add_product(conn, p.identifier, supermarket_id);
+	id_t product_id = find_add_product(conn, p.identifier, supermarket_id, p.name);
 
 	pqxx::work txn(conn);
 
@@ -536,6 +545,17 @@ std::vector<api::product_log> storage::get_recent_productlog(id_t supermarket_id
 	return log;
 }
 
+void storage::absorb_productclass(id_t src_productclass_id, id_t dest_productclass_id)
+{
+	pqxx::work txn(conn);
+
+	txn.prepared(conv(statement::absorb_productclass))
+			(src_productclass_id)
+			(dest_productclass_id).exec();
+
+	txn.commit();
+}
+
 id_t storage::add_image_citation(id_t supermarket_id, const std::string &original_uri, const std::string &source_uri, size_t original_width, size_t original_height, const datetime &retrieved_on)
 {
 	pqxx::work txn(conn);
@@ -576,8 +596,9 @@ void storage::update_database_schema()
 	ADD_SCHEMA(3);
 	ADD_SCHEMA(4);
 	ADD_SCHEMA(5);
+	ADD_SCHEMA(6);
 
-	const size_t target_schema_version = 5;
+	const size_t target_schema_version = 6;
 
 	unsigned int schema_version = 0;
 	try
@@ -652,6 +673,9 @@ void storage::prepare_statements()
 
 	PREPARE_STATEMENT(add_session)
 	PREPARE_STATEMENT(get_session_by_token)
+
+	PREPARE_STATEMENT(add_productclass)
+	PREPARE_STATEMENT(absorb_productclass)
 
 	PREPARE_STATEMENT(add_product)
 	PREPARE_STATEMENT(get_product_by_identifier)

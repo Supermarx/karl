@@ -1,1 +1,1 @@
-insert into product (identifier, supermarket_id) values ($1, $2) returning id
+insert into product (identifier, supermarket_id, productclass_id) values ($1, $2, $3) returning id
