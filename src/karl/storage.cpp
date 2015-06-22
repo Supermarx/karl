@@ -35,6 +35,11 @@ enum class statement : uint8_t
 	add_productdetailsrecord,
 	add_productlog,
 
+	add_tag,
+	get_tag_by_name,
+	add_tagcategory,
+	bind_tag,
+
 	add_imagecitation,
 	update_product_image_citation,
 
@@ -152,6 +157,7 @@ void read_product_summary(pqxx::result::tuple& row, api::product_summary& p)
 {
 	read_product(row, p);
 
+	rcoladv(row, p, productclass_id);
 	rcoladv(row, p, imagecitation_id);
 }
 
@@ -556,6 +562,59 @@ void storage::absorb_productclass(id_t src_productclass_id, id_t dest_productcla
 	txn.commit();
 }
 
+id_t storage::find_add_tag(const api::tag &t)
+{
+	pqxx::work txn(conn);
+
+	{
+		pqxx::result result_tag_get = txn.prepared(conv(statement::get_tag_by_name))
+				(t.name).exec();
+
+		if(result_tag_get.size() > 0)
+			return read_id(result_tag_get);
+	}
+
+	id_t id;
+	if(t.category)
+	{
+		pqxx::result result_tagcategory_add = txn.prepared(conv(statement::add_tagcategory))
+				(*t.category).exec();
+
+		id_t tagcategory_id = read_id(result_tagcategory_add);
+
+		pqxx::result result_tag_add = txn.prepared(conv(statement::add_tag))
+				() // NULL -> no parent
+				(tagcategory_id)
+				(t.name).exec();
+
+		id = read_id(result_tag_add);
+	}
+	else
+	{
+		pqxx::result result_tag_add = txn.prepared(conv(statement::add_tag))
+				() // NULL -> no parent
+				() // NULL -> no tag category
+				(t.name).exec();
+
+		id = read_id(result_tag_add);
+	}
+
+	txn.commit();
+
+	return id;
+}
+
+void storage::bind_tag(id_t productclass_id, id_t tag_id)
+{
+	pqxx::work txn(conn);
+
+	txn.prepared(conv(statement::bind_tag))
+			(tag_id)
+			(productclass_id).exec();
+
+	txn.commit();
+}
+
 id_t storage::add_image_citation(id_t supermarket_id, const std::string &original_uri, const std::string &source_uri, size_t original_width, size_t original_height, const datetime &retrieved_on)
 {
 	pqxx::work txn(conn);
@@ -597,8 +656,9 @@ void storage::update_database_schema()
 	ADD_SCHEMA(4);
 	ADD_SCHEMA(5);
 	ADD_SCHEMA(6);
+	ADD_SCHEMA(7);
 
-	const size_t target_schema_version = 6;
+	const size_t target_schema_version = 7;
 
 	unsigned int schema_version = 0;
 	try
@@ -679,6 +739,11 @@ void storage::prepare_statements()
 
 	PREPARE_STATEMENT(add_product)
 	PREPARE_STATEMENT(get_product_by_identifier)
+
+	PREPARE_STATEMENT(add_tag)
+	PREPARE_STATEMENT(get_tag_by_name)
+	PREPARE_STATEMENT(add_tagcategory)
+	PREPARE_STATEMENT(bind_tag)
 
 	PREPARE_STATEMENT(add_productdetails)
 	PREPARE_STATEMENT(add_productdetailsrecord)

@@ -1,0 +1,23 @@
+drop index product_identifierx;
+create unique index product_identifierx on product(identifier);
+
+create table tagcategory (
+	id serial primary key,
+	name varchar not null
+);
+
+create table tag (
+	id serial primary key,
+	parent_id int references tag(id),
+	tagcategory_id int references tagcategory(id),
+	name varchar not null
+);
+
+create unique index tag_namex on tag(name);
+
+create table tag_productclass (
+	tag_id int not null references tag(id),
+	productclass_id int not null references productclass(id)
+);
+
+create unique index tag_productclass_joinx on tag_productclass(tag_id, productclass_id);

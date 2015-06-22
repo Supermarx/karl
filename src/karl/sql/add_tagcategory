@@ -1,0 +1,6 @@
+insert into
+	tagcategory (
+		name
+	)
+values ($1)
+returning id

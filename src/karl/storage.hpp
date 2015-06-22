@@ -12,6 +12,7 @@
 #include <supermarx/api/product_history.hpp>
 #include <supermarx/api/product_log.hpp>
 #include <supermarx/api/session.hpp>
+#include <supermarx/api/tag.hpp>
 
 #include <karl/karluser.hpp>
 #include <karl/session.hpp>
@@ -50,6 +51,9 @@ public:
 	api::product_history get_product_history(std::string const& identifier, id_t supermarket_id);
 
 	void absorb_productclass(id_t src_productclass_id, id_t dest_productclass_id);
+
+	id_t find_add_tag(api::tag const& t);
+	void bind_tag(id_t productclass_id, id_t tag_id);
 
 	id_t add_image_citation(id_t supermarket_id, std::string const& original_uri, std::string const& source_uri, size_t original_width, size_t original_height, datetime const& retrieved_on);
 	void update_product_image_citation(std::string const& product_identifier, id_t supermarket_id, id_t image_citation_id);

@@ -37,6 +37,11 @@ namespace supermarx
 		void add_product(product const&, id_t supermarket_id, datetime retrieved_on, confidence conf, std::vector<std::string> const& problems);
 		void add_product_image_citation(id_t supermarket_id, std::string const& product_identifier, std::string const& original_uri, std::string const& source_uri, const datetime &retrieved_on, raw const& image);
 
+		void absorb_productclass(id_t src_productclass_id, id_t dest_productclass_id);
+
+		id_t find_add_tag(api::tag const& t);
+		void bind_tag(id_t productclass_id, id_t tag_id);
+
 	private:
 		storage backend;
 		image_citations ic;

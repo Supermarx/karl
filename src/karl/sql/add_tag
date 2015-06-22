@@ -1,0 +1,8 @@
+insert into
+	tag (
+		parent_id,
+		tagcategory_id,
+		name
+	)
+values ($1, $2, $3)
+returning id

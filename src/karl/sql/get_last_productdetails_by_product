@@ -1,5 +1,6 @@
 select productdetails.id,
 	product.identifier,
+	product.productclass_id,
 	product.imagecitation_id,
 	productdetails.name,
 	productdetails.volume,

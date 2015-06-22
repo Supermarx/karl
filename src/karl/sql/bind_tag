@@ -1,0 +1,13 @@
+insert into
+	tag_productclass (
+		tag_id,
+		productclass_id
+	)
+select
+	($1, $2)
+where
+	not exists (
+		select 1 from tag_productclass where
+			tag_id = $1 and
+			productclass_id = $2
+	);

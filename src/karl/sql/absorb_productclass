@@ -5,7 +5,11 @@ set
 where
 	product.productclass_id = $1;
 
-delete
-	productclass
+update
+	tag_productclass
+set
+	tag_productclass.productclass_id = $2
 where
-	productclass.id = $1;
+	tag_productclass.productclass_id = $1;
+
+delete productclass where productclass.id = $1;
