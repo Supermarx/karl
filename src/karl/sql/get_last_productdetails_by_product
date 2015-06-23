@@ -1,14 +1,17 @@
 select productdetails.id,
 	product.identifier,
-	product.productclass_id,
+	product.supermarket_id,
 	product.imagecitation_id,
-	productdetails.name,
-	productdetails.volume,
-	productdetails.volume_measure,
+	product.productclass_id,
+	product.name,
+	product.volume,
+	product.volume_measure,
+	productdetails.product_id,
 	productdetails.orig_price,
 	productdetails.price,
 	productdetails.discount_amount,
 	productdetails.valid_on,
+	productdetails.valid_until,
 	productdetails.retrieved_on
 from product
 	inner join productdetails on (product.id = productdetails.product_id)

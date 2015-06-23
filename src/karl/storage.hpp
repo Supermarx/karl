@@ -6,17 +6,29 @@
 
 #include <supermarx/id_t.hpp>
 #include <supermarx/token.hpp>
+#include <supermarx/qualified.hpp>
 
-#include <supermarx/product.hpp>
-#include <supermarx/api/product_summary.hpp>
-#include <supermarx/api/product_history.hpp>
-#include <supermarx/api/product_log.hpp>
-#include <supermarx/api/session.hpp>
-#include <supermarx/api/tag.hpp>
+#include <supermarx/message/add_product.hpp>
+#include <supermarx/message/product_summary.hpp>
+#include <supermarx/message/product_log.hpp>
+#include <supermarx/message/product_history.hpp>
+#include <supermarx/message/session.hpp>
+#include <supermarx/message/tag.hpp>
 
-#include <karl/karluser.hpp>
-#include <karl/session.hpp>
-#include <karl/sessionticket.hpp>
+#include <supermarx/data/tag.hpp>
+#include <supermarx/data/tagcategory.hpp>
+
+#include <supermarx/data/karluser.hpp>
+#include <supermarx/data/session.hpp>
+#include <supermarx/data/sessionticket.hpp>
+#include <supermarx/data/supermarket.hpp>
+#include <supermarx/data/imagecitation.hpp>
+
+#include <supermarx/data/product.hpp>
+#include <supermarx/data/productlog.hpp>
+#include <supermarx/data/productclass.hpp>
+#include <supermarx/data/productdetails.hpp>
+#include <supermarx/data/productdetailsrecord.hpp>
 
 namespace supermarx
 {
@@ -36,27 +48,29 @@ public:
 	storage(std::string const& host, std::string const& user, std::string const& password, const std::string& db);
 	~storage();
 
-	id_t add_karluser(karluser const& user);
-	karluser get_karluser(id_t karluser_id);
-	std::pair<id_t, karluser> get_karluser_by_name(std::string const& name);
-	id_t add_sessionticket(sessionticket const& st);
-	std::pair<id_t, sessionticket> get_sessionticket(id_t sessionticket_id);
-	id_t add_session(session const& s);
-	std::pair<id_t, session> get_session_by_token(api::sessiontoken const& token);
+	reference<data::karluser> add_karluser(data::karluser const& user);
+	qualified<data::karluser> get_karluser(reference<data::karluser> karluser_id);
+	qualified<data::karluser> get_karluser_by_name(std::string const& name);
 
-	void add_product(product const& p, id_t supermarket_id, datetime retrieved_on, confidence conf, std::vector<std::string> const& problems);
-	api::product_summary get_product(std::string const& identifier, id_t supermarket_id);
-	std::vector<api::product_summary> get_products_by_name(std::string const& name, id_t supermarket_id);
-	std::vector<api::product_log> get_recent_productlog(id_t supermarket_id);
-	api::product_history get_product_history(std::string const& identifier, id_t supermarket_id);
+	reference<data::sessionticket> add_sessionticket(data::sessionticket const& st);
+	qualified<data::sessionticket> get_sessionticket(reference<data::sessionticket> sessionticket_id);
 
-	void absorb_productclass(id_t src_productclass_id, id_t dest_productclass_id);
+	reference<data::session> add_session(data::session const& s);
+	qualified<data::session> get_session_by_token(message::sessiontoken const& token);
 
-	id_t find_add_tag(api::tag const& t);
-	void bind_tag(id_t productclass_id, id_t tag_id);
+	void add_product(reference<data::supermarket> supermarket_id, message::add_product const& ap);
+	message::product_summary get_product(std::string const& identifier, reference<data::supermarket> supermarket_id);
+	std::vector<message::product_summary> get_products_by_name(std::string const& name, reference<data::supermarket> supermarket_id);
+	std::vector<message::product_log> get_recent_productlog(reference<data::supermarket> supermarket_id);
+	message::product_history get_product_history(std::string const& identifier, reference<data::supermarket> supermarket_id);
 
-	id_t add_image_citation(id_t supermarket_id, std::string const& original_uri, std::string const& source_uri, size_t original_width, size_t original_height, datetime const& retrieved_on);
-	void update_product_image_citation(std::string const& product_identifier, id_t supermarket_id, id_t image_citation_id);
+	void absorb_productclass(reference<data::productclass> src_productclass_id, reference<data::productclass> dest_productclass_id);
+
+	reference<data::tag> find_add_tag(message::tag const& t);
+	void bind_tag(reference<data::productclass> productclass_id, reference<data::tag> tag_id);
+
+	reference<data::imagecitation> add_image_citation(data::imagecitation const& imagecitation);
+	void update_product_image_citation(std::string const& product_identifier, reference<data::supermarket> supermarket_id, reference<data::imagecitation> imagecitation_id);
 
 private:
 	void update_database_schema();

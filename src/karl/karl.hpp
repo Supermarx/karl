@@ -3,12 +3,9 @@
 #include <vector>
 
 #include <supermarx/id_t.hpp>
-#include <supermarx/product.hpp>
 
-#include <supermarx/api/product_summary.hpp>
-#include <supermarx/api/product_log.hpp>
-#include <supermarx/api/product_history.hpp>
-#include <supermarx/api/session.hpp>
+#include <supermarx/message/add_product.hpp>
+#include <supermarx/message/session.hpp>
 
 #include <karl/storage.hpp>
 #include <karl/image_citations.hpp>
@@ -26,21 +23,22 @@ namespace supermarx
 		bool check_permissions() const;
 
 		void create_user(std::string const& name, std::string const& password);
-		api::sessionticket generate_sessionticket(std::string const& user);
-		api::sessiontoken create_session(id_t sessionticket_id, token const& ticket_password);
-		void check_session(api::sessiontoken const& token);
+		message::sessionticket generate_sessionticket(std::string const& user);
+		message::sessiontoken create_session(reference<data::sessionticket> sessionticket_id, token const& ticket_password);
+		void check_session(message::sessiontoken const& token);
 
-		api::product_summary get_product(std::string const& identifier, id_t supermarket_id);
-		std::vector<api::product_summary> get_products(std::string const& name, id_t supermarket_id);
-		api::product_history get_product_history(std::string const& identifier, id_t supermarket_id);
-		std::vector<api::product_log> get_recent_productlog(id_t supermarket_id);
-		void add_product(product const&, id_t supermarket_id, datetime retrieved_on, confidence conf, std::vector<std::string> const& problems);
-		void add_product_image_citation(id_t supermarket_id, std::string const& product_identifier, std::string const& original_uri, std::string const& source_uri, const datetime &retrieved_on, raw const& image);
+		message::product_summary get_product(std::string const& identifier, reference<data::supermarket> supermarket_id);
+		std::vector<message::product_summary> get_products(std::string const& name, reference<data::supermarket> supermarket_id);
+		message::product_history get_product_history(std::string const& identifier, reference<data::supermarket> supermarket_id);
+		std::vector<message::product_log> get_recent_productlog(reference<data::supermarket> supermarket_id);
 
-		void absorb_productclass(id_t src_productclass_id, id_t dest_productclass_id);
+		void add_product(reference<data::supermarket> supermarket_id, message::add_product const& ap);
+		void add_product_image_citation(reference<data::supermarket> supermarket_id, std::string const& product_identifier, std::string const& original_uri, std::string const& source_uri, const datetime &retrieved_on, raw const& image);
 
-		id_t find_add_tag(api::tag const& t);
-		void bind_tag(id_t productclass_id, id_t tag_id);
+		void absorb_productclass(reference<data::productclass> src_productclass_id, reference<data::productclass> dest_productclass_id);
+
+		reference<data::tag> find_add_tag(message::tag const& t);
+		void bind_tag(reference<data::productclass> productclass_id, reference<data::tag> tag_id);
 
 	private:
 		storage backend;

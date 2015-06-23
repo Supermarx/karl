@@ -1,1 +1,14 @@
-select product.id from product where product.identifier = $1 and product.supermarket_id = $2
+select
+	product.id,
+	product.identifier,
+	product.supermarket_id,
+	product.imagecitation_id,
+	product.productclass_id,
+	product.name,
+	product.volume,
+	product.volume_measure
+from
+	product
+where
+	product.identifier = $1 and
+	product.supermarket_id = $2

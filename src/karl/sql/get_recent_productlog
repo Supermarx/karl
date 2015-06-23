@@ -1,6 +1,6 @@
 select distinct
 	product.identifier,
-	productdetails.name,
+	product.name,
 	productlog.description
 from
 	product

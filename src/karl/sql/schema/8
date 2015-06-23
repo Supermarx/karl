@@ -1,0 +1,25 @@
+alter table product
+	add column name varchar,
+	add column volume integer,
+	add column volume_measure measure_t default 'UNITS';
+
+update product
+set
+	name = pd.name,
+	volume = pd.volume,
+	volume_measure = pd.volume_measure
+from
+	productdetails as pd
+where
+	product.id = pd.product_id and
+	pd.valid_until is null;
+
+alter table product
+	alter column name set not null,
+	alter column volume set not null,
+	alter column volume_measure set not null;
+
+alter table productdetails
+	drop column name,
+	drop column volume,
+	drop column volume_measure;

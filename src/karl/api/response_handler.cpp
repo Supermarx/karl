@@ -10,8 +10,8 @@
 #include <supermarx/serialization/serialize_fusion.hpp>
 #include <supermarx/serialization/deserialize_fusion.hpp>
 
-#include <supermarx/api/add_product.hpp>
-#include <supermarx/api/add_product_image_citation.hpp>
+#include <supermarx/message/add_product.hpp>
+#include <supermarx/message/add_product_image_citation.hpp>
 
 #include <karl/api/api_exception.hpp>
 #include <karl/api/uri.hpp>
@@ -171,9 +171,9 @@ bool process(request& r, response_handler::serializer_ptr& s, karl& k, const uri
 			return false;
 
 		id_t supermarket_id = boost::lexical_cast<id_t>(u.path[1]);
-		api::add_product request = deserialize_payload<api::add_product>(r, "add_product");
+		message::add_product request = deserialize_payload<message::add_product>(r, "add_product");
 
-		k.add_product(request.p, supermarket_id, request.retrieved_on, request.c, request.problems);
+		k.add_product(supermarket_id, request);
 		s->write_object("response", 1);
 		s->write("status", std::string("done"));
 		return true;
@@ -189,7 +189,7 @@ bool process(request& r, response_handler::serializer_ptr& s, karl& k, const uri
 		id_t supermarket_id = boost::lexical_cast<id_t>(u.path[1]);
 		std::string product_identifier = u.path[2];
 
-		api::add_product_image_citation request = deserialize_payload<api::add_product_image_citation>(r, "add_product_image_citation");
+		message::add_product_image_citation request = deserialize_payload<message::add_product_image_citation>(r, "add_product_image_citation");
 
 		k.add_product_image_citation(supermarket_id, product_identifier, request.original_uri, request.source_uri, request.retrieved_on, request.image);
 		s->write_object("response", 1);
@@ -249,7 +249,7 @@ bool process(request& r, response_handler::serializer_ptr& s, karl& k, const uri
 			return false;
 
 		token password_hashed(to_token(password_hashed_post->second.value));
-		api::sessiontoken stok(k.create_session(sessiontoken_id, password_hashed));
+		message::sessiontoken stok(k.create_session(sessiontoken_id, password_hashed));
 
 		serialize(s, "sessiontoken", stok);
 		return true;

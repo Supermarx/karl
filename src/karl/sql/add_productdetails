@@ -1,9 +1,6 @@
 insert into
 	productdetails (
 		product_id,
-		name,
-		volume,
-		volume_measure,
 		orig_price,
 		price,
 		discount_amount,
@@ -12,6 +9,6 @@ insert into
 		retrieved_on
 	)
 values (
-	$1, $2, $3, $4, $5, $6, $7, $8, NULL, $9
+	$1, $2, $3, $4, $5, $6, $7
 )
 returning id
