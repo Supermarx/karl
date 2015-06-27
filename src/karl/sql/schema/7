@@ -1,5 +1,5 @@
 drop index product_identifierx;
-create unique index product_identifierx on product(identifier);
+create unique index product_identifier_supermarketx on product(identifier, supermarket_id);
 
 create table tagcategory (
 	id serial primary key,
