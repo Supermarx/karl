@@ -1,7 +1,6 @@
 #include <karl/karl.hpp>
 
 #include <iostream>
-#include <sodium.h>
 
 #include <karl/util/log.hpp>
 
