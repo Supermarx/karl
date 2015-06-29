@@ -37,7 +37,7 @@ private:
 		boost::program_options::options_description options("Allowed options");
 		options.add(o_general);
 		options.add_options()
-				("action", boost::program_options::value(&opt.action), "test");
+				("action", boost::program_options::value(&opt.action));
 
 		try
 		{
