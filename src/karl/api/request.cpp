@@ -1,10 +1,10 @@
 #include <karl/api/request.hpp>
 
 #include <karl/api/response_handler.hpp>
-#include <karl/api/api_exception.hpp>
 
 #include <karl/util/log.hpp>
 
+#include <supermarx/api/exception.hpp>
 #include <supermarx/util/timer.hpp>
 
 namespace supermarx
@@ -26,7 +26,7 @@ bool fcgi_request::response()
 	}
 	catch(api::exception e)
 	{
-		log("api::fcgi_request", log::WARNING)() << "api_exception - " << api_exception_message(e) << " (" << e << ")";
+		log("api::fcgi_request", log::WARNING)() << "api_exception - " << api::exception_message(e) << " (" << e << ")";
 	}
 	catch(std::exception& e)
 	{

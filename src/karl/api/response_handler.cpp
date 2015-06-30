@@ -12,8 +12,10 @@
 
 #include <supermarx/message/add_product.hpp>
 #include <supermarx/message/add_product_image_citation.hpp>
+#include <supermarx/message/exception.hpp>
 
-#include <karl/api/api_exception.hpp>
+#include <supermarx/api/exception.hpp>
+
 #include <karl/api/uri.hpp>
 
 #include <karl/util/log.hpp>
@@ -88,18 +90,6 @@ bool url_decode(const std::string& in, std::string& out)
 	return true;
 }
 
-void write_exception(request& r, response_handler::serializer_ptr& s, api::exception e)
-{
-	s->clear(); //Clear any previous content
-
-	r.write_header("Status", api_exception_status(e));
-
-	s->write_object("exception", 3);
-	s->write("code", e);
-	s->write("message", api_exception_message(e));
-	s->write("help", "http://supermarx.nl/docs/api_exception/" + boost::lexical_cast<std::string>(e) + "/");
-}
-
 std::string fetch_payload(const request& r)
 {
 	const auto payload_itr = r.env().posts.find("payload");
@@ -122,6 +112,19 @@ template<typename T>
 void package(response_handler::serializer_ptr& s, const T& x, const std::string& name)
 {
 	serialize<T>(s, name, x);
+}
+
+void write_exception(request& r, response_handler::serializer_ptr& s, api::exception e)
+{
+	s->clear(); //Clear any previous content
+
+	r.write_header("Status", api::exception_status(e));
+
+	package(s, message::exception{
+		e,
+		api::exception_message(e),
+		"http://supermarx.nl/docs/api_exception/" + boost::lexical_cast<std::string>(e) + "/"
+	}, "exception");
 }
 
 void require_permissions(request const& r, karl& k)
@@ -295,7 +298,7 @@ void response_handler::respond(request& r, karl& k)
 	}
 	catch(api::exception e)
 	{
-		log("api::response_handler", log::WARNING)() << "api_exception - " << api_exception_message(e) << " (" << e << ")";
+		log("api::response_handler", log::WARNING)() << "api_exception - " << api::exception_message(e) << " (" << e << ")";
 
 		write_exception(r, s, e);
 	}

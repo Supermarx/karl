@@ -4,7 +4,7 @@
 
 #include <karl/util/log.hpp>
 
-#include <karl/api/api_exception.hpp>
+#include <supermarx/api/exception.hpp>
 #include <supermarx/api/session_operations.hpp>
 
 namespace supermarx {
