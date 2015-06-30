@@ -108,19 +108,28 @@ public:
 		}
 		else if(opt.action == "create-user")
 		{
-			std::string username;
+			std::string username, password;
 
-			std::cerr << "Username:" << std::endl;
-			std::cin >> username;
+			while(username == "")
+			{
+				std::cerr << "Username: ";
+				std::getline(std::cin, username);
+			}
 
-			std::string password(to_string(api::random_token()));
+			std::cerr << "Password (leave blank for autogen): ";
+			std::getline(std::cin, password);
+
+			bool autogen_password = (password == "");
+			if(autogen_password)
+				password = to_string(api::random_token());
 
 			karl.create_user(username, password);
 
-			std::cerr << std::endl
-					  << "Use the following password:" << std::endl
-					  << password << std::endl
-					  << std::endl;
+			if(autogen_password)
+				std::cerr << std::endl
+						  << "Use the following password:" << std::endl
+						  << password << std::endl
+						  << std::endl;
 		}
 		else
 		{
