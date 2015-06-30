@@ -37,7 +37,7 @@ namespace supermarx {
 		qualified<data::karluser> ku([&]() { try {
 			return backend.get_karluser_by_name(user);
 		} catch(storage::not_found_error) {
-			throw api_exception::authentication_error; // User does not exist
+			throw api::exception::authentication_error; // User does not exist
 		}}());
 
 		log("karl::generate_sessionticket", log::level_e::DEBUG)() << "Generating nonce";
@@ -64,7 +64,7 @@ namespace supermarx {
 			token ticket_password_known(api::hash(user.password_hashed, sessionticket.data.nonce));
 
 			if(ticket_password != ticket_password_known)
-				throw api_exception::authentication_error;
+				throw api::exception::authentication_error;
 		}
 		else
 			log("karl::create_session", log::level_e::DEBUG)() << "Not checking password, as no-perms has been enabled";
@@ -86,13 +86,13 @@ namespace supermarx {
 		qualified<data::session> session([&]() { try {
 			return backend.get_session_by_token(token);
 		} catch(storage::not_found_error) {
-			throw api_exception::session_invalid;
+			throw api::exception::session_invalid;
 		}}());
 
 		assert(session.data.token == token);
 
 		if(session.data.creation + time(6, 0, 0, 0) < datetime_now())
-			throw api_exception::session_invalid; // Session timeout
+			throw api::exception::session_invalid; // Session timeout
 
 		log("karl::check_session", log::level_e::DEBUG)() << "Validated session [id: " << session.id << "]";
 	}

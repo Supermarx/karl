@@ -24,7 +24,7 @@ bool fcgi_request::response()
 	{
 		response_handler::respond(r, k);
 	}
-	catch(api_exception e)
+	catch(api::exception e)
 	{
 		log("api::fcgi_request", log::WARNING)() << "api_exception - " << api_exception_message(e) << " (" << e << ")";
 	}
@@ -54,7 +54,7 @@ void request::write_header(const std::string key, const std::string value)
 	else if(state == state_e::header)
 		fcgi.out << "\n";
 	else
-		throw api_exception::state_unexpected;
+		throw api::exception::state_unexpected;
 
 	fcgi.out << key << ": " << value;
 }
@@ -62,7 +62,7 @@ void request::write_header(const std::string key, const std::string value)
 void request::write_endofheader()
 {
 	if(state != state_e::header)
-		throw api_exception::state_unexpected;
+		throw api::exception::state_unexpected;
 
 	state = state_e::body;
 	fcgi.out << "\r\n\r\n";
@@ -71,7 +71,7 @@ void request::write_endofheader()
 void request::write_text(const std::string& str) const
 {
 	if(state != state_e::body)
-		throw api_exception::state_unexpected;
+		throw api::exception::state_unexpected;
 
 	fcgi.out << str;
 }
@@ -79,7 +79,7 @@ void request::write_text(const std::string& str) const
 void request::write_bytes(const char *data, size_t size) const
 {
 	if(state != state_e::body)
-		throw api_exception::state_unexpected;
+		throw api::exception::state_unexpected;
 
 	fcgi.out.dump(data, size);
 }

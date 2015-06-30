@@ -36,7 +36,7 @@ target_link_libraries(karlcore
 	${scrypt_LIBRARIES}
 	)
 
-add_library(karlapi api/api_server.cpp api/api_exception.cpp api/request.cpp api/uri.cpp api/response_handler.cpp)
+add_library(karlapi api/api_server.cpp api/request.cpp api/uri.cpp api/response_handler.cpp)
 target_link_libraries(karlapi
 	karlcore
 	supermarx-serialization-xml

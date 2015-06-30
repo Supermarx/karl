@@ -51,7 +51,7 @@ void init_serializer(request& r, response_handler::serializer_ptr& s)
 	else if(format->second == "msgpack_compact")
 		s.reset(new msgpack_compact_serializer());
 	else
-		throw api_exception::format_unknown;
+		throw api::exception::format_unknown;
 }
 
 bool url_decode(const std::string& in, std::string& out)
@@ -88,7 +88,7 @@ bool url_decode(const std::string& in, std::string& out)
 	return true;
 }
 
-void write_exception(request& r, response_handler::serializer_ptr& s, api_exception e)
+void write_exception(request& r, response_handler::serializer_ptr& s, api::exception e)
 {
 	s->clear(); //Clear any previous content
 
@@ -104,7 +104,7 @@ std::string fetch_payload(const request& r)
 {
 	const auto payload_itr = r.env().posts.find("payload");
 	if(payload_itr == r.env().posts.end())
-		throw api_exception::payload_expected;
+		throw api::exception::payload_expected;
 
 	return payload_itr->second.value;
 }
@@ -132,7 +132,7 @@ void require_permissions(request const& r, karl& k)
 	auto const& stok(r.env().posts.find("sessiontoken"));
 
 	if(stok == r.env().posts.end())
-		throw api_exception::session_expected;
+		throw api::exception::session_expected;
 
 	k.check_session(supermarx::to_token(stok->second.value));
 }
@@ -210,7 +210,7 @@ bool process(request& r, response_handler::serializer_ptr& s, karl& k, const uri
 			serialize(s, "product_history", k.get_product_history(identifier, supermarket_id));
 		} catch(storage::not_found_error)
 		{
-			throw api_exception::product_not_found;
+			throw api::exception::product_not_found;
 		}
 
 		return true;
@@ -291,9 +291,9 @@ void response_handler::respond(request& r, karl& k)
 		if(process(r, s, k, u))
 			r.write_header("Status", "200 OK");
 		else
-			throw api_exception::path_unknown;
+			throw api::exception::path_unknown;
 	}
-	catch(api_exception e)
+	catch(api::exception e)
 	{
 		log("api::response_handler", log::WARNING)() << "api_exception - " << api_exception_message(e) << " (" << e << ")";
 
@@ -303,13 +303,13 @@ void response_handler::respond(request& r, karl& k)
 	{
 		log("api::response_handler", log::ERROR)() << "Uncaught exception: " << e.what();
 
-		write_exception(r, s, api_exception::unknown);
+		write_exception(r, s, api::exception::unknown);
 	}
 	catch( ... )
 	{
 		log("api::response_handler", log::ERROR)() << "Unknown exception";
 
-		write_exception(r, s, api_exception::unknown);
+		write_exception(r, s, api::exception::unknown);
 	}
 
 	r.write_endofheader();
