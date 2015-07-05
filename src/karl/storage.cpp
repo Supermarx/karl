@@ -42,6 +42,7 @@ enum class statement : uint8_t
 	add_tag,
 	get_tag_by_name,
 	add_tagcategory,
+	get_tagcategory_by_name,
 	bind_tag,
 
 	add_imagecitation,
@@ -436,6 +437,19 @@ void storage::absorb_productclass(reference<data::productclass> src_productclass
 	txn.commit();
 }
 
+reference<data::tagcategory> find_add_tagcategory_unsafe(pqxx::transaction_base& txn, data::tagcategory const& tc)
+{
+	{
+		pqxx::result result_tagcategory_get = txn.prepared(conv(statement::get_tagcategory_by_name))
+				(tc.name).exec();
+
+		if(result_tagcategory_get.size() > 0)
+			return reference<data::tagcategory>(read_id(result_tagcategory_get));
+	}
+
+	return write_with_id(txn, statement::add_tagcategory, data::tagcategory(tc));
+}
+
 reference<data::tag> storage::find_add_tag(const message::tag &t)
 {
 	pqxx::work txn(conn);
@@ -450,7 +464,7 @@ reference<data::tag> storage::find_add_tag(const message::tag &t)
 
 	boost::optional<reference<data::tagcategory>> tagcategory_id;
 	if(t.category)
-		tagcategory_id.reset(write_with_id(txn, statement::add_tagcategory, data::tagcategory({*t.category})));
+		tagcategory_id.reset(find_add_tagcategory_unsafe(txn, data::tagcategory{*t.category}));
 
 	data::tag tag({
 		boost::none,
@@ -592,6 +606,7 @@ void storage::prepare_statements()
 	PREPARE_STATEMENT(add_tag)
 	PREPARE_STATEMENT(get_tag_by_name)
 	PREPARE_STATEMENT(add_tagcategory)
+	PREPARE_STATEMENT(get_tagcategory_by_name)
 	PREPARE_STATEMENT(bind_tag)
 
 	PREPARE_STATEMENT(add_productdetails)

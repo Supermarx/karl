@@ -6,6 +6,8 @@ create table tagcategory (
 	name varchar not null
 );
 
+create unique index tagcategory_namex on tagcategory(name);
+
 create table tag (
 	id serial primary key,
 	parent_id int references tag(id),

@@ -4,7 +4,7 @@ insert into
 		productclass_id
 	)
 select
-	($1, $2)
+	$1, $2
 where
 	not exists (
 		select 1 from tag_productclass where

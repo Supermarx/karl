@@ -143,4 +143,14 @@ namespace supermarx {
 
 		backend.update_product_image_citation(product_identifier, supermarket_id, ic_id);
 	}
+
+	reference<data::tag> karl::find_add_tag(message::tag const& t)
+	{
+		return backend.find_add_tag(t);
+	}
+
+	void karl::bind_tag(reference<data::productclass> productclass_id, reference<data::tag> tag_id)
+	{
+		backend.bind_tag(productclass_id, tag_id);
+	}
 }

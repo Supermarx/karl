@@ -230,6 +230,28 @@ bool process(request& r, response_handler::serializer_ptr& s, karl& k, const uri
 		return true;
 	}
 
+	if(u.match_path(0, "bind_tag"))
+	{
+		require_permissions(r, k);
+
+		if(u.path.size() != 3)
+			return false;
+
+		id_t supermarket_id = boost::lexical_cast<id_t>(u.path[1]);
+		std::string product_identifier = u.path[2];
+
+		message::tag request = deserialize_payload<message::tag>(r, "tag");
+
+		message::product_summary ps(k.get_product(product_identifier, supermarket_id));
+		reference<data::tag> tag_id(k.find_add_tag(request));
+		k.bind_tag(ps.productclass_id, tag_id);
+
+		s->write_object("response", 1);
+		s->write("status", std::string("done"));
+
+		return true;
+	}
+
 	if(u.match_path(0, "create_sessionticket"))
 	{
 		if(u.path.size() != 2)
