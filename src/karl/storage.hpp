@@ -60,6 +60,7 @@ public:
 
 	void add_product(reference<data::supermarket> supermarket_id, message::add_product const& ap);
 	message::product_summary get_product(std::string const& identifier, reference<data::supermarket> supermarket_id);
+	std::vector<message::product_summary> get_products(reference<data::supermarket> supermarket_id);
 	std::vector<message::product_summary> get_products_by_name(std::string const& name, reference<data::supermarket> supermarket_id);
 	std::vector<message::product_log> get_recent_productlog(reference<data::supermarket> supermarket_id);
 	message::product_history get_product_history(std::string const& identifier, reference<data::supermarket> supermarket_id);

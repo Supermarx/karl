@@ -49,6 +49,7 @@ enum class statement : uint8_t
 	update_product_image_citation,
 
 	get_all_productdetails_by_product,
+	get_last_productdetails,
 	get_last_productdetails_by_product,
 	get_last_productdetails_by_name,
 	invalidate_productdetails,
@@ -369,6 +370,25 @@ message::product_history storage::get_product_history(std::string const& identif
 	return history;
 }
 
+std::vector<message::product_summary> storage::get_products(reference<data::supermarket> supermarket_id)
+{
+	pqxx::work txn(conn);
+
+	pqxx::result result = txn.prepared(conv(statement::get_last_productdetails))
+			(supermarket_id.unseal()).exec();
+
+	std::vector<message::product_summary> products;
+	for(auto row : result)
+	{
+		auto p(read_result<data::product>(row));
+		auto pd(read_result<data::productdetails>(row));
+
+		products.emplace_back(message::product_summary::merge(p, pd));
+	}
+
+	return products;
+}
+
 std::vector<message::product_summary> storage::get_products_by_name(std::string const& name, reference<data::supermarket> supermarket_id)
 {
 	pqxx::work txn(conn);
@@ -617,6 +637,7 @@ void storage::prepare_statements()
 	PREPARE_STATEMENT(update_product_image_citation);
 
 	PREPARE_STATEMENT(get_all_productdetails_by_product)
+	PREPARE_STATEMENT(get_last_productdetails)
 	PREPARE_STATEMENT(get_last_productdetails_by_product)
 	PREPARE_STATEMENT(get_last_productdetails_by_name)
 	PREPARE_STATEMENT(invalidate_productdetails)
