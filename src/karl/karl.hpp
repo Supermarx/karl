@@ -40,6 +40,8 @@ namespace supermarx
 		reference<data::tag> find_add_tag(message::tag const& t);
 		void bind_tag(reference<data::productclass> productclass_id, reference<data::tag> tag_id);
 
+		void test();
+
 	private:
 		storage backend;
 		image_citations ic;

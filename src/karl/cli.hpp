@@ -131,6 +131,10 @@ public:
 						  << password << std::endl
 						  << std::endl;
 		}
+		else if(opt.action == "test")
+		{
+			karl.test();
+		}
 		else
 		{
 			std::cerr << "Unknown action '" << opt.action << "', see --help." << std::endl;

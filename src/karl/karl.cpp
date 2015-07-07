@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include <karl/util/log.hpp>
+#include <karl/similarity.hpp>
 
 #include <supermarx/api/exception.hpp>
 #include <supermarx/api/session_operations.hpp>
@@ -152,5 +153,34 @@ namespace supermarx {
 	void karl::bind_tag(reference<data::productclass> productclass_id, reference<data::tag> tag_id)
 	{
 		backend.bind_tag(productclass_id, tag_id);
+	}
+
+	void karl::test()
+	{
+		message::product_summary xps(backend.get_product("wi210145", 1));
+		std::vector<message::product_summary> vps(backend.get_products(4));
+		std::vector<std::pair<size_t, float>> rps;
+		rps.reserve(vps.size());
+
+		{
+			size_t i = 0;
+			for(auto const& yps : vps)
+			{
+				rps.emplace_back(i, similarity::exec(xps, yps));
+				++i;
+			}
+		}
+
+		std::sort(rps.begin(), rps.end(), [](std::pair<size_t, float> a, std::pair<size_t, float> b) {
+			return a.second > b.second;
+		});
+
+		std::cout << "Comparing " << xps.name << " " << xps.orig_price << " " << xps.volume << std::endl;
+		for(size_t i = 0; i < 3; ++i)
+		{
+			auto const& kvp(rps.at(i));
+			auto const& yps(vps.at(kvp.first));
+			std::cout << yps.name << " " << yps.orig_price << " " << yps.volume << " [" << kvp.second << "]" << std::endl;
+		}
 	}
 }
