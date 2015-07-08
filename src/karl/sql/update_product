@@ -1,0 +1,16 @@
+update product set
+	name = $1,
+	volume = $2,
+	volume_measure = $3
+where
+	identifier = $4 and
+	supermarket_id = $5
+returning
+	id,
+	identifier,
+	supermarket_id,
+	imagecitation_id,
+	productclass_id,
+	name,
+	volume,
+	volume_measure

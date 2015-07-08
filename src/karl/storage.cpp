@@ -33,6 +33,7 @@ enum class statement : uint8_t
 	absorb_productclass,
 
 	add_product,
+	update_product,
 	get_product_by_identifier,
 
 	add_productdetails,
@@ -59,7 +60,7 @@ enum class statement : uint8_t
 
 inline std::string conv(statement rhs)
 {
-	return std::string("PREP_STATEMENT") + boost::lexical_cast<std::string>((uint32_t)rhs);
+	return std::string("PREP_STATEMENT") + boost::lexical_cast<std::string>(static_cast<uint32_t>(rhs));
 }
 
 id_t read_id(pqxx::result& result)
@@ -170,7 +171,7 @@ qualified<data::productdetails> fetch_last_productdetails_unsafe(pqxx::transacti
 	return read_first_result<qualified<data::productdetails>>(result);
 }
 
-reference<data::product> find_add_product(pqxx::connection& conn, reference<data::supermarket> supermarket_id, message::product_base const& pb)
+qualified<data::product> find_add_product(pqxx::connection& conn, reference<data::supermarket> supermarket_id, message::product_base const& pb)
 {
 	{
 		pqxx::work txn(conn);
@@ -178,7 +179,7 @@ reference<data::product> find_add_product(pqxx::connection& conn, reference<data
 
 		try
 		{
-			return find_product_unsafe(txn, supermarket_id, pb.identifier).id;
+			return find_product_unsafe(txn, supermarket_id, pb.identifier);
 		} catch(storage::not_found_error)
 		{}
 	}
@@ -189,7 +190,7 @@ reference<data::product> find_add_product(pqxx::connection& conn, reference<data
 
 		try
 		{
-			return find_product_unsafe(txn, supermarket_id, pb.identifier).id;
+			return find_product_unsafe(txn, supermarket_id, pb.identifier);
 		} catch(storage::not_found_error)
 		{}
 
@@ -198,7 +199,7 @@ reference<data::product> find_add_product(pqxx::connection& conn, reference<data
 				pb.name
 		})));
 
-		reference<data::product> product_id(write_with_id(txn, statement::add_product, data::product({
+		data::product p({
 			pb.identifier,
 			supermarket_id,
 			boost::none,
@@ -206,10 +207,12 @@ reference<data::product> find_add_product(pqxx::connection& conn, reference<data
 			pb.name,
 			pb.volume,
 			pb.volume_measure
-		})));
+		});
+
+		reference<data::product> product_id(write_with_id(txn, statement::add_product, p));
 		txn.commit();
 
-		return product_id;
+		return qualified<data::product>(product_id, p);
 	}
 }
 
@@ -257,69 +260,84 @@ qualified<data::session> storage::get_session_by_token(const message::sessiontok
 	return fetch_simple_first<qualified<data::session>>(conn, statement::get_session_by_token, token_bs);
 }
 
-void storage::add_product(reference<data::supermarket> supermarket_id, message::add_product const& ap)
+void storage::add_product(reference<data::supermarket> supermarket_id, message::add_product const& ap_new)
 {
-	message::product_base const& p = ap.p;
+	message::product_base const& p_new = ap_new.p;
 
-	reference<data::product> product_id(find_add_product(conn, supermarket_id, ap.p));
-	// TODO update data::product if required
+	qualified<data::product> p_canonical(find_add_product(conn, supermarket_id, ap_new.p));
 
 	pqxx::work txn(conn);
+	if(
+		p_canonical.data.name != p_new.name ||
+		p_canonical.data.volume != p_new.volume ||
+		p_canonical.data.volume_measure != p_new.volume_measure
+	)
+	{
+		p_canonical = read_first_result<qualified<data::product>>(
+			txn.prepared(conv(statement::update_product))
+				(p_new.name)
+				(p_new.volume)
+				(to_string(p_new.volume_measure))
+				(p_new.identifier)
+				(supermarket_id.unseal()).exec()
+		);
+		log("storage::storage", log::level_e::NOTICE)() << "Updated product " << supermarket_id << ":" << p_canonical.data.identifier << " [" << p_canonical.id << ']';
+	}
+
 	// Check if an older version of the product exactly matches what we've got
 	try
 	{
-		qualified<data::productdetails> pd_old(fetch_last_productdetails_unsafe(txn, product_id));
+		qualified<data::productdetails> pd_old(fetch_last_productdetails_unsafe(txn, p_canonical.id));
 
 		bool similar = (
-			p.discount_amount == pd_old.data.discount_amount &&
-			p.orig_price == pd_old.data.orig_price &&
-			p.price == pd_old.data.price
+			p_new.discount_amount == pd_old.data.discount_amount &&
+			p_new.orig_price == pd_old.data.orig_price &&
+			p_new.price == pd_old.data.price
 		);
 
 		if(similar)
 		{
 			data::productdetailsrecord pdr({
 				pd_old.id,
-				ap.retrieved_on,
-				ap.c
+				ap_new.retrieved_on,
+				ap_new.c
 			});
 
-			register_productdetailsrecord(txn, pdr, ap.problems);
+			register_productdetailsrecord(txn, pdr, ap_new.problems);
 			txn.commit();
 			return;
 		}
 		else
 		{
 			txn.prepared(conv(statement::invalidate_productdetails))
-					(to_string(p.valid_on))
-					(product_id.unseal()).exec();
+					(to_string(p_new.valid_on))
+					(p_canonical.id.unseal()).exec();
 		}
-
 	} catch(storage::not_found_error)
 	{
 		// Not found, continue
 	}
 
-	data::productdetails pd({
-		product_id,
-		p.orig_price,
-		p.price,
-		p.discount_amount,
-		p.valid_on,
+	data::productdetails pd_new({
+		p_canonical.id,
+		p_new.orig_price,
+		p_new.price,
+		p_new.discount_amount,
+		p_new.valid_on,
 		boost::none, // Valid until <NULL> (still valid in future)
-		ap.retrieved_on
+		ap_new.retrieved_on
 	});
 
-	reference<data::productdetails> productdetails_id(write_with_id(txn, statement::add_productdetails, pd));
-	log("storage::storage", log::level_e::NOTICE)() << "Inserted new productdetails " << productdetails_id << " for product " << p.identifier << " [" << product_id << ']';
+	reference<data::productdetails> productdetails_id(write_with_id(txn, statement::add_productdetails, pd_new));
+	log("storage::storage", log::level_e::NOTICE)() << "Inserted new productdetails " << productdetails_id << " for product " << p_new.identifier << " [" << p_canonical.id << ']';
 
 	data::productdetailsrecord pdr({
 		productdetails_id,
-		ap.retrieved_on,
-		ap.c
+		ap_new.retrieved_on,
+		ap_new.c
 	});
 
-	register_productdetailsrecord(txn, pdr, ap.problems);
+	register_productdetailsrecord(txn, pdr, ap_new.problems);
 	txn.commit();
 }
 
@@ -527,7 +545,7 @@ void storage::update_product_image_citation(const std::string &product_identifie
 }
 
 #define ADD_SCHEMA(ID)\
-	schema_queries.emplace(std::make_pair(ID, std::string((char*) sql_schema_ ## ID, sql_schema_ ## ID ## _len)));
+	schema_queries.emplace(std::make_pair(ID, std::string(reinterpret_cast<char*>(sql_schema_ ## ID), sql_schema_ ## ID ## _len)));
 
 void storage::update_database_schema()
 {
@@ -603,7 +621,7 @@ void storage::update_database_schema()
 #undef ADD_SCHEMA
 
 #define PREPARE_STATEMENT(NAME)\
-	conn.prepare(conv(statement::NAME), std::string((char*) sql_ ## NAME, sql_ ## NAME ## _len));
+	conn.prepare(conv(statement::NAME), std::string(reinterpret_cast<char*>(sql_ ## NAME), sql_ ## NAME ## _len));
 
 void storage::prepare_statements()
 {
@@ -621,6 +639,7 @@ void storage::prepare_statements()
 	PREPARE_STATEMENT(absorb_productclass)
 
 	PREPARE_STATEMENT(add_product)
+	PREPARE_STATEMENT(update_product)
 	PREPARE_STATEMENT(get_product_by_identifier)
 
 	PREPARE_STATEMENT(add_tag)
