@@ -158,29 +158,47 @@ namespace supermarx {
 	void karl::test()
 	{
 		message::product_summary xps(backend.get_product("wi210145", 1));
-		std::vector<message::product_summary> vps(backend.get_products(4));
-		std::vector<std::pair<size_t, float>> rps;
-		rps.reserve(vps.size());
-
-		{
-			size_t i = 0;
-			for(auto const& yps : vps)
-			{
-				rps.emplace_back(i, similarity::exec(xps, yps));
-				++i;
-			}
-		}
-
-		std::sort(rps.begin(), rps.end(), [](std::pair<size_t, float> a, std::pair<size_t, float> b) {
-			return a.second > b.second;
-		});
 
 		std::cout << "Comparing " << xps.name << " " << xps.orig_price << " " << xps.volume << std::endl;
-		for(size_t i = 0; i < 3; ++i)
+
+		for(id_t supermarket_id = 2; supermarket_id <= 5; ++supermarket_id)
 		{
-			auto const& kvp(rps.at(i));
-			auto const& yps(vps.at(kvp.first));
-			std::cout << yps.name << " " << yps.orig_price << " " << yps.volume << " [" << kvp.second << "]" << std::endl;
+			std::cout
+				<< "---" << std::endl
+				<< "Supermarket " << supermarket_id << std::endl
+				<< "---" << std::endl;
+
+			std::vector<message::product_summary> vps(backend.get_products(supermarket_id));
+
+			typedef std::tuple<size_t, similarity::valuation, float> tup_t;
+			std::vector<tup_t> rps;
+			rps.reserve(vps.size());
+
+			{
+				size_t i = 0;
+				for(auto const& yps : vps)
+				{
+					similarity::valuation v(similarity::exec(xps, yps));
+					rps.emplace_back(i, v, v.collapse());
+					++i;
+				}
+			}
+
+			std::sort(rps.begin(), rps.end(), [](tup_t a, tup_t b) {
+				return std::get<2>(a) > std::get<2>(b);
+			});
+
+			for(size_t i = 0; i < 5; ++i)
+			{
+				auto const& tup(rps.at(i));
+				auto const& yps(vps.at(std::get<0>(tup)));
+				std::cout << yps.name << " " << yps.orig_price << " " << yps.volume << " [" << std::get<2>(tup) << "]";
+
+				for(float v : std::get<1>(tup).data)
+					std::cout << " " << std::round(100.0f*v)/100.0f;
+
+				std::cout << std::endl;
+			}
 		}
 	}
 }

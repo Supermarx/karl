@@ -6,12 +6,39 @@
 #include <supermarx/message/product_summary.hpp>
 
 #include <karl/util/levenshtein.hpp>
+#include <karl/util/hungarian_fast.hpp>
 
 namespace supermarx
 {
 
 class similarity
 {
+public:
+	struct valuation
+	{
+		static constexpr size_t N = 3;
+
+		std::array<float, N> data;
+
+		valuation(decltype(data) _data)
+		: data(_data)
+		{}
+
+		float collapse() const
+		{
+			static constexpr std::array<float, N> weights = {
+				0.6f, 0.2f, 0.2f
+			};
+
+			float similarity = 0.0f;
+
+			for(size_t i = 0; i < N; ++i)
+				similarity += weights[i] * data[i];
+
+			return similarity;
+		}
+	};
+
 private:
 	template<typename T>
 	static inline float max_set(std::vector<T> const& xs, std::function<float(T const&)> f)
@@ -33,37 +60,59 @@ private:
 		if(xs.size() > ys.size())
 			std::swap(xs, ys);
 
-		float similarity = 0.0f;
-		for(auto const& xe : xs)
-			similarity += max_set<std::string>(ys, [&](std::string const& ye) {
-				return 1.0f - (float)levenshtein(xe, ye) / (float)std::max(xe.size(), ye.size());
-			});
+		typedef uint8_t sim_t;
+		similarity_matrix<sim_t> sm(ys.size(), xs.size());
+		for(size_t yi = 0; yi < ys.size(); ++yi)
+		{
+			for(size_t xi = 0; xi < xs.size(); ++xi)
+			{
+				std::string const& ye = ys.at(yi);
+				std::string const& xe = xs.at(xi);
 
-		similarity /= (float)xs.size();
+				size_t distance_yx(levenshtein(ye, xe));
+				assert(distance_yx >= 0 && distance_yx <= std::numeric_limits<sim_t>::max());
+
+				sm(yi, xi) = static_cast<sim_t>(std::max(ye.size(), xe.size()) - distance_yx);
+			}
+		}
+
+		hungarian_fast<decltype(sm)::similarity> h(sm);
+		auto matching = h.produce();
+
+		float similarity = 0.0f;
+		for(auto matching_e : matching)
+		{
+			size_t yi = matching_e.first;
+			size_t xi = matching_e.second;
+
+			std::string const& ye = ys.at(yi);
+			std::string const& xe = xs.at(xi);
+
+			similarity += (float)sm(yi, xi) / (float)std::max(ye.size(), xe.size());
+		}
+
+		similarity /= (float)std::min(ys.size(), xs.size()); // Due to std::swap ys.size() will always be bigger, Hungarian will thus always yield xs.size() elements
 		return similarity;
 	}
 
-	template<typename T>
-	static inline float numeric_compare(T x, T y)
+	static inline float numeric_compare(float x, float y)
 	{
-		return 1.0f - (float)std::abs(x - y) / (float)std::max(x, y);
+		float result = 1.0f - std::abs(x - y) / std::max(x, y);
+		assert(result >= 0.0f && result <= 1.0f);
+
+		return result;
 	}
 
 public:
 	similarity() = delete;
 
-	static inline float exec(message::product_summary const& x, message::product_summary const& y)
+	static inline valuation exec(message::product_summary const& x, message::product_summary const& y)
 	{
-		float similarity = 0.0;
-
-		//similarity += 1.0f - (float)levenshtein(boost::to_lower_copy(x.name), boost::to_lower_copy(y.name)) / (float)std::max(x.name.size(), y.name.size()); // TODO wordwise
-		similarity += 0.3f * textual_compare(boost::to_lower_copy(x.name), boost::to_lower_copy(y.name));
-		similarity += 0.2f * numeric_compare(x.orig_price, y.orig_price);
-
-		if(x.volume_measure == y.volume_measure)
-			similarity += 0.5f * numeric_compare(x.volume, y.volume);
-
-		return similarity;
+		return valuation({
+			textual_compare(boost::to_lower_copy(x.name), boost::to_lower_copy(y.name)),
+			numeric_compare(x.orig_price, y.orig_price),
+			(x.volume_measure == y.volume_measure && x.volume == y.volume) ? 1.0f : 0.0f
+		});
 	}
 };
 

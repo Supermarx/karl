@@ -17,28 +17,27 @@ namespace supermarx
 		if(n == 0)
 			return m;
 
-		std::vector<size_t> costs;
-		costs.reserve(n+1);
+		std::vector<size_t> costs(n+1);
 		std::iota(costs.begin(), costs.end(), 0);
 
 		for(size_t i = 0; i < m; ++i)
 		{
-			char cx = x[i];
+			char cx = x.at(i);
 
 			costs[0] = i+1;
 			size_t corner = i;
 
 			for(size_t j = 0; j < n; ++j)
 			{
-				char cy = y[j];
-				size_t upper = costs[j+1];
+				char cy = y.at(j);
+				size_t upper = costs.at(j+1);
 
-				if( cx == cy )
-					costs[j+1] = corner;
+				if(cx == cy)
+					costs.at(j+1) = corner;
 				else
 				{
 					size_t t(upper < corner ? upper : corner);
-					costs[j+1] = (costs[j] < t ? costs[j] : t) + 1;
+					costs.at(j+1) = (costs.at(j) < t ? costs.at(j) : t) + 1;
 				}
 
 				corner = upper;
