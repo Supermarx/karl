@@ -54,25 +54,25 @@ private:
 	static inline float textual_compare(std::string const& x, std::string const& y)
 	{
 		std::vector<std::string> xs, ys;
-		boost::split(xs, x, boost::is_any_of("\t "));
-		boost::split(ys, y, boost::is_any_of("\t "));
+		boost::split(xs, x, boost::is_any_of(" "));
+		boost::split(ys, y, boost::is_any_of(" "));
 
 		if(xs.size() > ys.size())
 			std::swap(xs, ys);
 
-		typedef uint8_t sim_t;
+		typedef float sim_t;
 		similarity_matrix<sim_t> sm(ys.size(), xs.size());
 		for(size_t yi = 0; yi < ys.size(); ++yi)
 		{
 			for(size_t xi = 0; xi < xs.size(); ++xi)
 			{
-				std::string const& ye = ys.at(yi);
-				std::string const& xe = xs.at(xi);
+				std::string const& ye = ys[yi];
+				std::string const& xe = xs[xi];
 
 				size_t distance_yx(levenshtein(ye, xe));
 				assert(distance_yx >= 0 && distance_yx <= std::numeric_limits<sim_t>::max());
 
-				sm(yi, xi) = static_cast<sim_t>(std::max(ye.size(), xe.size()) - distance_yx);
+				sm(yi, xi) = static_cast<sim_t>(std::max(ye.size(), xe.size()) - distance_yx) / (sim_t)std::max(ye.size(), xe.size());
 			}
 		}
 
@@ -85,14 +85,13 @@ private:
 			size_t yi = matching_e.first;
 			size_t xi = matching_e.second;
 
-			std::string const& ye = ys.at(yi);
-			std::string const& xe = xs.at(xi);
-
-			similarity += (float)sm(yi, xi) / (float)std::max(ye.size(), xe.size());
+			similarity += (float)sm(yi, xi);
 		}
 
-		similarity /= (float)std::min(ys.size(), xs.size()); // Due to std::swap ys.size() will always be bigger, Hungarian will thus always yield xs.size() elements
-		return similarity;
+		float sim_min = std::min(ys.size(), xs.size()); // Due to std::swap ys.size() will always be bigger, Hungarian will thus always yield xs.size() elements
+		float sim_max = std::max(ys.size(), xs.size());
+
+		return 0.9f * similarity / sim_min + 0.1f * similarity / sim_max;
 	}
 
 	static inline float numeric_compare(float x, float y)
