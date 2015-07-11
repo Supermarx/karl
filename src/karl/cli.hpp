@@ -1,5 +1,7 @@
 #pragma once
 
+#include <iostream>
+
 #include <karl/karl.hpp>
 #include <karl/config.hpp>
 #include <karl/api/api_server.hpp>
