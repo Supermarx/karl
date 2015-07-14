@@ -1,0 +1,1 @@
+create index productdetails_valid_untilx on productdetails(valid_until);
