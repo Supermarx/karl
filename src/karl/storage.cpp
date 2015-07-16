@@ -8,6 +8,9 @@
 
 #include <supermarx/util/guard.hpp>
 
+#include <supermarx/data/tagalias.hpp>
+#include <supermarx/data/tagcategoryalias.hpp>
+
 #include "sql.cc"
 
 namespace supermarx
@@ -559,8 +562,9 @@ void storage::update_database_schema()
 	ADD_SCHEMA(7);
 	ADD_SCHEMA(8);
 	ADD_SCHEMA(9);
+	ADD_SCHEMA(10);
 
-	const size_t target_schema_version = 9;
+	const size_t target_schema_version = 10;
 
 	unsigned int schema_version = 0;
 	try
