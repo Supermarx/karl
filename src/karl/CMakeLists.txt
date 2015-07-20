@@ -18,6 +18,7 @@ find_package(pqxx REQUIRED)
 list(APPEND Karl_INCLUDE_DIRS ${pqxx_INCLUDE_DIRS})
 
 find_package(ImageMagick COMPONENTS Magick++ REQUIRED)
+add_definitions(-DMAGICKCORE_QUANTUM_DEPTH=16 -DMAGICKCORE_HDRI_ENABLE=0)
 list(APPEND Karl_INCLUDE_DIRS ${ImageMagick_INCLUDE_DIRS})
 
 find_package(scrypt REQUIRED)
