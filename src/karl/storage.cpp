@@ -1,6 +1,7 @@
 #include <karl/storage.hpp>
 
 #include <boost/algorithm/string/predicate.hpp>
+#include <boost/lexical_cast.hpp>
 
 #include <karl/util/log.hpp>
 #include <karl/storage_read_fusion.hpp>
