@@ -1,7 +1,0 @@
-select
-	tagcategory.id,
-	tagcategory.name
-from
-	tagcategory
-where
-	tagcategory.name = $1

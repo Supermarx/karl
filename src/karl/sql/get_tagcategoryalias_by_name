@@ -1,0 +1,8 @@
+select
+	tagcategoryalias.id,
+	tagcategoryalias.tagcategory_id,
+	tagcategoryalias.name
+from
+	tagcategoryalias
+where
+	tagcategoryalias.name = $1

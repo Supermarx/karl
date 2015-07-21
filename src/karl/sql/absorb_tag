@@ -1,0 +1,22 @@
+update
+	tag_productclass
+set
+	tag_productclass.tag_id = $2
+where
+	tag_productclass.tag_id = $1;
+
+update
+	tagalias
+set
+	tagalias.tag_id = $2
+where
+	tagalias.tag_id = $1;
+
+update
+	tag
+set
+	tag.parent_id = $2
+where
+	tag.parent_id = $1;
+
+delete tag where tag.id = $1;

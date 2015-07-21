@@ -1,9 +1,0 @@
-select
-	tag.id,
-	tag.parent_id,
-	tag.tagcategory_id,
-	tag.name
-from
-	tag
-where
-	tag.name = $1

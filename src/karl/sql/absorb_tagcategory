@@ -1,0 +1,15 @@
+update
+	tagcategoryalias
+set
+	tagcategoryalias.tagcategory_id = $2
+where
+	tagcategoryalias.tagcategory_id = $1;
+
+update
+	tag
+set
+	tag.tagcategory_id = $2
+where
+	tag.tagcategory_id = $1;
+
+delete tagcategory where tagcategory.id = $1;

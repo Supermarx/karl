@@ -1,0 +1,8 @@
+select
+	tagalias.id,
+	tagalias.tag_id,
+	tagalias.name
+from
+	tagalias
+where
+	tagalias.name = $1

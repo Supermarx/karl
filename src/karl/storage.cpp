@@ -45,9 +45,13 @@ enum class statement : uint8_t
 	add_productlog,
 
 	add_tag,
-	get_tag_by_name,
+	add_tagalias,
+	get_tagalias_by_name,
 	add_tagcategory,
-	get_tagcategory_by_name,
+	add_tagcategoryalias,
+	get_tagcategoryalias_by_name,
+	absorb_tag,
+	absorb_tagcategory,
 	bind_tag,
 
 	add_imagecitation,
@@ -67,10 +71,10 @@ inline std::string conv(statement rhs)
 	return std::string("PREP_STATEMENT") + boost::lexical_cast<std::string>(static_cast<uint32_t>(rhs));
 }
 
-id_t read_id(pqxx::result& result)
+id_t read_id(pqxx::result& result, std::string const& key = "id")
 {
 	for(auto row : result)
-		return row["id"].as<id_t>();
+		return row[key].as<id_t>();
 
 	throw std::logic_error("Storage backend did not return a single row for `read_id`");
 }
@@ -479,45 +483,58 @@ void storage::absorb_productclass(reference<data::productclass> src_productclass
 	txn.commit();
 }
 
-reference<data::tagcategory> find_add_tagcategory_unsafe(pqxx::transaction_base& txn, data::tagcategory const& tc)
-{
-	{
-		pqxx::result result_tagcategory_get = txn.prepared(conv(statement::get_tagcategory_by_name))
-				(tc.name).exec();
-
-		if(result_tagcategory_get.size() > 0)
-			return reference<data::tagcategory>(read_id(result_tagcategory_get));
-	}
-
-	return write_with_id(txn, statement::add_tagcategory, data::tagcategory(tc));
-}
-
-reference<data::tag> storage::find_add_tag(const message::tag &t)
+reference<data::tagcategory> storage::find_add_tagcategory(std::string const& name)
 {
 	pqxx::work txn(conn);
 
-	{
-		pqxx::result result_tag_get = txn.prepared(conv(statement::get_tag_by_name))
-				(t.name).exec();
+	pqxx::result result_tagcategoryalias = txn.prepared(conv(statement::get_tagcategoryalias_by_name))
+			(name).exec();
 
-		if(result_tag_get.size() > 0)
-			return reference<data::tag>(read_id(result_tag_get));
-	}
+	if(result_tagcategoryalias.size() > 0)
+		return reference<data::tagcategory>(read_id(result_tagcategoryalias, "tagcategory_id"));
 
-	boost::optional<reference<data::tagcategory>> tagcategory_id;
-	if(t.category)
-		tagcategory_id.reset(find_add_tagcategory_unsafe(txn, data::tagcategory{*t.category}));
-
-	data::tag tag({
-		boost::none,
-		tagcategory_id,
-		t.name
-	});
-
-	reference<data::tag> tag_id(write_with_id(txn, statement::add_tag, tag));
+	reference<data::tagcategory> tagcategory_id(write_with_id(txn, statement::add_tagcategory, data::tagcategory({name})));
+	write(txn, statement::add_tagcategoryalias, data::tagcategoryalias({tagcategory_id, name}));
 
 	txn.commit();
+
+	return tagcategory_id;
+}
+
+reference<data::tag> storage::find_add_tag(std::string const& name, boost::optional<reference<data::tagcategory>> tagcategory_id)
+{
+	pqxx::work txn(conn);
+
+	pqxx::result result_tagalias = txn.prepared(conv(statement::get_tagalias_by_name))
+			(name).exec();
+
+	if(result_tagalias.size() > 0)
+		return reference<data::tag>(read_id(result_tagalias, "tag_id"));
+
+	reference<data::tag> tag_id(write_with_id(txn, statement::add_tag, data::tag({boost::none, tagcategory_id, name})));
+	write(txn, statement::add_tagalias, data::tagalias({tag_id, name}));
+
+	txn.commit();
+
 	return tag_id;
+}
+
+void storage::absorb_tagcategory(reference<data::tagcategory> src_tagcategory_id, reference<data::tagcategory> dest_tagcategory_id)
+{
+	pqxx::work txn(conn);
+	txn.prepared(conv(statement::absorb_tagcategory))
+			(src_tagcategory_id.unseal())
+			(dest_tagcategory_id.unseal()).exec();
+	txn.commit();
+}
+
+void storage::absorb_tag(reference<data::tag> src_tag_id, reference<data::tag> dest_tag_id)
+{
+	pqxx::work txn(conn);
+	txn.prepared(conv(statement::absorb_tag))
+			(src_tag_id.unseal())
+			(dest_tag_id.unseal()).exec();
+	txn.commit();
 }
 
 void storage::bind_tag(reference<data::productclass> productclass_id, reference<data::tag> tag_id)
@@ -649,9 +666,13 @@ void storage::prepare_statements()
 	PREPARE_STATEMENT(get_product_by_identifier)
 
 	PREPARE_STATEMENT(add_tag)
-	PREPARE_STATEMENT(get_tag_by_name)
+	PREPARE_STATEMENT(add_tagalias)
+	PREPARE_STATEMENT(get_tagalias_by_name)
 	PREPARE_STATEMENT(add_tagcategory)
-	PREPARE_STATEMENT(get_tagcategory_by_name)
+	PREPARE_STATEMENT(add_tagcategoryalias)
+	PREPARE_STATEMENT(get_tagcategoryalias_by_name)
+	PREPARE_STATEMENT(absorb_tag)
+	PREPARE_STATEMENT(absorb_tagcategory)
 	PREPARE_STATEMENT(bind_tag)
 
 	PREPARE_STATEMENT(add_productdetails)

@@ -67,8 +67,12 @@ public:
 
 	void absorb_productclass(reference<data::productclass> src_productclass_id, reference<data::productclass> dest_productclass_id);
 
-	reference<data::tag> find_add_tag(message::tag const& t);
+	reference<data::tagcategory> find_add_tagcategory(std::string const& name);
+	reference<data::tag> find_add_tag(std::string const& name, boost::optional<reference<data::tagcategory>> tagcategory_id = boost::none);
+
 	void bind_tag(reference<data::productclass> productclass_id, reference<data::tag> tag_id);
+	void absorb_tagcategory(reference<data::tagcategory> src_tagcategory_id, reference<data::tagcategory> dest_tagcategory_id);
+	void absorb_tag(reference<data::tag> src_tag_id, reference<data::tag> dest_tag_id);
 
 	reference<data::imagecitation> add_image_citation(data::imagecitation const& imagecitation);
 	void update_product_image_citation(std::string const& product_identifier, reference<data::supermarket> supermarket_id, reference<data::imagecitation> imagecitation_id);
