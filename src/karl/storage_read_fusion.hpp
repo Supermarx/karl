@@ -53,7 +53,7 @@ struct rcol<date>
 {
 	static inline date exec(pqxx::result::tuple const& row, std::string const& key)
 	{
-		return to_date(row[key].as<std::string>());
+		return supermarx::to_date(row[key].as<std::string>());
 	}
 };
 
@@ -62,7 +62,7 @@ struct rcol<datetime>
 {
 	static inline datetime exec(pqxx::result::tuple const& row, std::string const& key)
 	{
-		return to_datetime(row[key].as<std::string>());
+		return supermarx::to_datetime(row[key].as<std::string>());
 	}
 };
 
