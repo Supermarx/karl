@@ -5,4 +5,4 @@ select
 from
 	tagcategoryalias
 where
-	tagcategoryalias.name = $1
+	lower(tagcategoryalias.name) = lower($1)

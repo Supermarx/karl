@@ -5,6 +5,7 @@ create table tagcategoryalias (
 );
 
 create unique index tagcategoryalias_namex on tagcategoryalias(name);
+create unique index tagcategoryalias_lowernamex on tagcategoryalias (lower(name));
 
 insert into tagcategoryalias (tagcategory_id, name)
 	select
@@ -20,6 +21,7 @@ create table tagalias (
 );
 
 create unique index tagalias_namex on tagalias(name);
+create unique index tagalias_lowernamex on tagalias (lower(name));
 
 insert into tagalias (tag_id, name)
 	select

@@ -5,4 +5,4 @@ select
 from
 	tagalias
 where
-	tagalias.name = $1
+	lower(tagalias.name) = lower($1)
