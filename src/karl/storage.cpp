@@ -456,6 +456,7 @@ std::vector<message::product_log> storage::get_recent_productlog(reference<data:
 			pl.identifier = identifier;
 			pl.name = row["name"].as<std::string>();
 			pl.messages.emplace_back(message);
+			pl.retrieved_on = to_datetime(row["retrieved_on"].as<std::string>());
 
 			log_map.insert(std::make_pair(identifier, pl));
 		}
