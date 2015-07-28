@@ -92,7 +92,7 @@ namespace supermarx {
 
 		assert(session.data.token == token);
 
-		if(session.data.creation + time(6, 0, 0, 0) < datetime_now())
+		if(session.data.creation + time(12, 0, 0, 0) < datetime_now())
 			throw api::exception::session_invalid; // Session timeout
 
 		log("karl::check_session", log::level_e::DEBUG)() << "Validated session [id: " << session.id << "]";
