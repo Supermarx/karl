@@ -17,11 +17,11 @@ private:
 		{
 		case measure::UNITS:
 			return 1;
-		case measure::MILLILITERS:
+		case measure::MILLILITRES:
 			return 1000;
 		case measure::MILLIGRAMS:
 			return 1000000;
-		case measure::MILLIMETERS:
+		case measure::MILLIMETRES:
 			return 1000;
 		}
 	}

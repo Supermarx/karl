@@ -1,0 +1,13 @@
+create type measure_new_t as enum ('UNITS', 'MILLILITRES', 'MILLIGRAMS', 'MILLIMETRES');
+
+alter table product alter column volume_measure drop default;
+alter table product alter column volume_measure type measure_new_t using
+	case volume_measure
+		when 'MILLILITERS' then 'MILLILITRES'
+		when 'MILLIMETERS' then 'MILLIMETRES'
+		else volume_measure::text::measure_new_t
+	end;
+alter table product alter column volume_measure set default 'UNITS';
+
+drop type measure_t;
+alter type measure_new_t rename to measure_t;

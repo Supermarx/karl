@@ -602,8 +602,9 @@ void storage::update_database_schema()
 	ADD_SCHEMA(8);
 	ADD_SCHEMA(9);
 	ADD_SCHEMA(10);
+	ADD_SCHEMA(11);
 
-	const size_t target_schema_version = 10;
+	const size_t target_schema_version = 11;
 
 	unsigned int schema_version = 0;
 	try
