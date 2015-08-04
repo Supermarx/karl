@@ -3,6 +3,8 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/lexical_cast.hpp>
 
+#include <karl/price_normalization.hpp>
+
 #include <karl/util/log.hpp>
 #include <karl/storage_read_fusion.hpp>
 #include <karl/storage_write_fusion.hpp>
@@ -161,6 +163,24 @@ void lock_products_read(pqxx::transaction_base& txn)
 void lock_products_write(pqxx::transaction_base& txn)
 {
 	txn.exec("lock table product in access exclusive mode");
+}
+
+inline static message::product_summary merge(data::product const& p, data::productdetails const& pd)
+{
+	return message::product_summary({
+		p.identifier,
+		p.name,
+		p.productclass_id,
+		p.volume,
+		p.volume_measure,
+		pd.orig_price,
+		pd.price,
+		pd.discount_amount,
+		price_normalization::exec(pd.orig_price, p.volume, p.volume_measure),
+		price_normalization::exec(pd.price, p.volume, p.volume_measure),
+		pd.valid_on,
+		p.imagecitation_id
+	});
 }
 
 qualified<data::product> find_product_unsafe(pqxx::transaction_base& txn, reference<data::supermarket> supermarket_id, std::string const& identifier)
@@ -360,7 +380,7 @@ message::product_summary storage::get_product(const std::string &identifier, ref
 	try
 	{
 		qualified<data::productdetails> pd(fetch_last_productdetails_unsafe(txn, p.id));
-		return message::product_summary::merge(p.data, pd.data);
+		return merge(p.data, pd.data);
 	} catch(storage::not_found_error)
 	{
 		throw std::logic_error(std::string("Inconsistency: found product ") + boost::lexical_cast<std::string>(p.id.unseal()) + " but has no (latest) productdetails entry");
@@ -409,7 +429,7 @@ std::vector<message::product_summary> storage::get_products(reference<data::supe
 		auto p(read_result<data::product>(row));
 		auto pd(read_result<data::productdetails>(row));
 
-		products.emplace_back(message::product_summary::merge(p, pd));
+		products.emplace_back(merge(p, pd));
 	}
 
 	return products;
@@ -429,7 +449,7 @@ std::vector<message::product_summary> storage::get_products_by_name(std::string 
 		auto p(read_result<data::product>(row));
 		auto pd(read_result<data::productdetails>(row));
 
-		products.emplace_back(message::product_summary::merge(p, pd));
+		products.emplace_back(merge(p, pd));
 	}
 
 	return products;
