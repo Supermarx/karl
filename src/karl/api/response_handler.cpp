@@ -150,7 +150,13 @@ bool process(request& r, response_handler::serializer_ptr& s, karl& k, const uri
 		id_t supermarket_id = boost::lexical_cast<id_t>(u.path[1]);
 		std::string identifier = u.path[2];
 
-		serialize(s, "product_summary", k.get_product(identifier, supermarket_id));
+		try
+		{
+			serialize(s, "product_summary", k.get_product(identifier, supermarket_id));
+		} catch(storage::not_found_error)
+		{
+			throw api::exception::product_not_found;
+		}
 		return true;
 	}
 
@@ -330,6 +336,13 @@ void response_handler::respond(request& r, karl& k)
 
 		write_exception(r, s, api::exception::unknown);
 	}
+	catch(storage::not_found_error)
+	{
+		log("api::response_handler", log::ERROR)() << "Uncaught storage::not_found_error";
+
+		write_exception(r, s, api::exception::unknown);
+	}
+
 	catch( ... )
 	{
 		log("api::response_handler", log::ERROR)() << "Unknown exception";
