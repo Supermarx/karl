@@ -31,6 +31,13 @@ public:
 	{
 		uint64_t ca = canonical_volume(volume_measure);
 
+		if(volume == 0)
+			return normalized_price({
+				price,
+				1,
+				measure::UNITS
+			});
+
 		return normalized_price({
 			price * ca / volume,
 			ca,
