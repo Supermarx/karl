@@ -142,6 +142,16 @@ void require_permissions(request const& r, karl& k)
 
 bool process(request& r, response_handler::serializer_ptr& s, karl& k, const uri& u)
 {
+	if(u.match_path(0, "get_tags"))
+	{
+		if(u.path.size() != 1)
+			return false;
+
+		serialize(s, "tags", k.get_tags());
+
+		return true;
+	}
+
 	if(u.match_path(0, "get_product"))
 	{
 		if(u.path.size() != 3)

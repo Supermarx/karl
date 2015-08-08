@@ -37,6 +37,7 @@ namespace supermarx
 
 		void absorb_productclass(reference<data::productclass> src_productclass_id, reference<data::productclass> dest_productclass_id);
 
+		std::vector<qualified<data::tag>> get_tags();
 		reference<data::tag> find_add_tag(message::tag const& t);
 		void bind_tag(reference<data::productclass> productclass_id, reference<data::tag> tag_id);
 

@@ -49,6 +49,7 @@ enum class statement : uint8_t
 	add_productdetailsrecord,
 	add_productlog,
 
+	get_tags,
 	add_tag,
 	add_tagalias,
 	get_tagalias_by_name,
@@ -575,6 +576,18 @@ void storage::absorb_tag(reference<data::tag> src_tag_id, reference<data::tag> d
 	txn.commit();
 }
 
+std::vector<qualified<data::tag>> storage::get_tags()
+{
+	pqxx::work txn(conn);
+	pqxx::result result_tags(txn.prepared(conv(statement::get_tags)).exec());
+
+	std::vector<qualified<data::tag>> result;
+	for(pqxx::tuple const& tup : result_tags)
+		result.emplace_back(read_result<qualified<data::tag>>(tup));
+
+	return result;
+}
+
 void storage::bind_tag(reference<data::productclass> productclass_id, reference<data::tag> tag_id)
 {
 	pqxx::work txn(conn);
@@ -707,6 +720,7 @@ void storage::prepare_statements()
 	PREPARE_STATEMENT(update_product)
 	PREPARE_STATEMENT(get_product_by_identifier)
 
+	PREPARE_STATEMENT(get_tags)
 	PREPARE_STATEMENT(add_tag)
 	PREPARE_STATEMENT(add_tagalias)
 	PREPARE_STATEMENT(get_tagalias_by_name)

@@ -145,6 +145,11 @@ namespace supermarx {
 		backend.update_product_image_citation(product_identifier, supermarket_id, ic_id);
 	}
 
+	std::vector<qualified<data::tag>> karl::get_tags()
+	{
+		return backend.get_tags();
+	}
+
 	reference<data::tag> karl::find_add_tag(message::tag const& t)
 	{
 		if(t.category)

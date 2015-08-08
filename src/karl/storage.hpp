@@ -70,6 +70,7 @@ public:
 	reference<data::tagcategory> find_add_tagcategory(std::string const& name);
 	reference<data::tag> find_add_tag(std::string const& name, boost::optional<reference<data::tagcategory>> tagcategory_id = boost::none);
 
+	std::vector<qualified<data::tag>> get_tags();
 	void bind_tag(reference<data::productclass> productclass_id, reference<data::tag> tag_id);
 	void absorb_tagcategory(reference<data::tagcategory> src_tagcategory_id, reference<data::tagcategory> dest_tagcategory_id);
 	void absorb_tag(reference<data::tag> src_tag_id, reference<data::tag> dest_tag_id);
