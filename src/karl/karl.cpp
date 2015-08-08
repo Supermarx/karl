@@ -163,47 +163,73 @@ namespace supermarx {
 
 	void karl::test()
 	{
-		message::product_summary xps(backend.get_product("wi210145", 1));
+		id_t base_supermarket = 1;
+		std::vector<id_t> slave_supermarkets = {2, 3, 4, 5};
 
-		std::cout << "Comparing " << xps.name << " " << xps.orig_price << " " << xps.volume << std::endl;
+		std::map<reference<data::supermarket>, std::vector<message::product_summary>> map_supermarket_products;
 
-		for(id_t supermarket_id = 2; supermarket_id <= 5; ++supermarket_id)
+		auto fetch_supermarket_f([&](reference<data::supermarket> supermarket_id)
 		{
-			std::cout
-				<< "---" << std::endl
-				<< "Supermarket " << supermarket_id << std::endl
-				<< "---" << std::endl;
+			map_supermarket_products.emplace(std::make_pair(supermarket_id, backend.get_products(supermarket_id)));
+		});
 
-			std::vector<message::product_summary> vps(backend.get_products(supermarket_id));
+		fetch_supermarket_f(base_supermarket);
+		for(reference<data::supermarket> slave_supermarket_id : slave_supermarkets)
+			fetch_supermarket_f(slave_supermarket_id);
 
-			typedef std::tuple<size_t, similarity::valuation, float> tup_t;
-			std::vector<tup_t> rps;
-			rps.reserve(vps.size());
+		auto const x_tup(map_supermarket_products.at(base_supermarket));
+		for(message::product_summary const& xps : x_tup)
+		{
+			//message::product_summary xps(backend.get_product("wi210145", 1));
 
+			std::cout << "Comparing " << xps.name << " " << xps.orig_price << " " << xps.volume << std::endl;
+
+			for(id_t supermarket_id : slave_supermarkets)
 			{
-				size_t i = 0;
-				for(auto const& yps : vps)
+				std::cout << "Supermarket " << supermarket_id << std::endl;
+
+				std::vector<message::product_summary> vps(backend.get_products(supermarket_id));
+
+				typedef std::tuple<size_t, similarity::valuation, float> tup_t;
+				std::vector<tup_t> rps;
+				rps.reserve(vps.size());
+
 				{
-					similarity::valuation v(similarity::exec(xps, yps));
-					rps.emplace_back(i, v, v.collapse());
-					++i;
+					size_t i = 0;
+					for(auto const& yps : vps)
+					{
+						similarity::valuation v(similarity::exec(xps, yps));
+						rps.emplace_back(i, v, v.collapse());
+						++i;
+					}
 				}
-			}
 
-			std::sort(rps.begin(), rps.end(), [](tup_t a, tup_t b) {
-				return std::get<2>(a) > std::get<2>(b);
-			});
+				std::sort(rps.begin(), rps.end(), [](tup_t a, tup_t b) {
+					return std::get<2>(a) > std::get<2>(b);
+				});
 
-			for(size_t i = 0; i < 5; ++i)
-			{
+				size_t i = 0;
+
 				auto const& tup(rps.at(i));
 				auto const& yps(vps.at(std::get<0>(tup)));
+
+				if(xps.productclass_id == yps.productclass_id)
+					continue;
+
+				if(std::get<2>(tup) <= 0.5)
+				{
+					std::cout << "No match" << std::endl;
+					continue;
+				}
+
 				std::cout << yps.name << " " << yps.orig_price << " " << yps.volume << " [" << std::get<2>(tup) << "]";
 
 				for(float v : std::get<1>(tup).data)
 					std::cout << " " << std::round(100.0f*v)/100.0f;
 
 				std::cout << std::endl;
+
+				backend.absorb_productclass(yps.productclass_id, xps.productclass_id);
 			}
 		}
 	}

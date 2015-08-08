@@ -1,0 +1,1 @@
+delete from productclass where productclass.id = $1

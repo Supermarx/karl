@@ -36,7 +36,10 @@ enum class statement : uint8_t
 	get_session_by_token,
 
 	add_productclass,
-	absorb_productclass,
+	absorb_productclass_product,
+	absorb_productclass_delete_tag_productclass,
+	absorb_productclass_tag_productclass,
+	absorb_productclass_delete,
 
 	add_product,
 	update_product,
@@ -497,9 +500,23 @@ void storage::absorb_productclass(reference<data::productclass> src_productclass
 {
 	pqxx::work txn(conn);
 
-	txn.prepared(conv(statement::absorb_productclass))
-			(src_productclass_id.unseal())
-			(dest_productclass_id.unseal()).exec();
+	id_t src_productclass_idu(src_productclass_id.unseal());
+	id_t dest_productclass_idu(dest_productclass_id.unseal());
+
+	txn.prepared(conv(statement::absorb_productclass_product))
+			(src_productclass_idu)
+			(dest_productclass_idu).exec();
+
+	txn.prepared(conv(statement::absorb_productclass_delete_tag_productclass))
+			(src_productclass_idu)
+			(dest_productclass_idu).exec();
+
+	txn.prepared(conv(statement::absorb_productclass_tag_productclass))
+			(src_productclass_idu)
+			(dest_productclass_idu).exec();
+
+	txn.prepared(conv(statement::absorb_productclass_delete))
+			(src_productclass_idu).exec();
 
 	txn.commit();
 }
@@ -681,7 +698,10 @@ void storage::prepare_statements()
 	PREPARE_STATEMENT(get_session_by_token)
 
 	PREPARE_STATEMENT(add_productclass)
-	PREPARE_STATEMENT(absorb_productclass)
+	PREPARE_STATEMENT(absorb_productclass_product)
+	PREPARE_STATEMENT(absorb_productclass_delete_tag_productclass)
+	PREPARE_STATEMENT(absorb_productclass_tag_productclass)
+	PREPARE_STATEMENT(absorb_productclass_delete)
 
 	PREPARE_STATEMENT(add_product)
 	PREPARE_STATEMENT(update_product)

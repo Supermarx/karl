@@ -1,0 +1,6 @@
+update
+    product
+set
+    productclass_id = $2
+where
+    product.productclass_id = $1

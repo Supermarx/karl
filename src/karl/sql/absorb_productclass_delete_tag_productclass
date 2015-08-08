@@ -1,0 +1,12 @@
+delete from
+	tag_productclass as t_pc1
+where
+	t_pc1.productclass_id = $1 and
+	t_pc1.tag_id in (
+		select
+			t_pc2.tag_id
+		from
+			tag_productclass as t_pc2
+		where
+			t_pc2.productclass_id = $2
+	)
