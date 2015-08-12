@@ -14,6 +14,7 @@
 #include <supermarx/message/product_history.hpp>
 #include <supermarx/message/session.hpp>
 #include <supermarx/message/tag.hpp>
+#include <supermarx/message/productclass_summary.hpp>
 
 #include <supermarx/data/tag.hpp>
 #include <supermarx/data/tagcategory.hpp>
@@ -65,6 +66,7 @@ public:
 	std::vector<message::product_log> get_recent_productlog(reference<data::supermarket> supermarket_id);
 	message::product_history get_product_history(std::string const& identifier, reference<data::supermarket> supermarket_id);
 
+	message::productclass_summary get_productclass(reference<data::productclass> productclass_id);
 	void absorb_productclass(reference<data::productclass> src_productclass_id, reference<data::productclass> dest_productclass_id);
 
 	reference<data::tagcategory> find_add_tagcategory(std::string const& name);

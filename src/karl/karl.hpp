@@ -35,6 +35,7 @@ namespace supermarx
 		void add_product(reference<data::supermarket> supermarket_id, message::add_product const& ap);
 		void add_product_image_citation(reference<data::supermarket> supermarket_id, std::string const& product_identifier, std::string const& original_uri, std::string const& source_uri, const datetime &retrieved_on, raw const& image);
 
+		message::productclass_summary get_productclass(reference<data::productclass> productclass_id);
 		void absorb_productclass(reference<data::productclass> src_productclass_id, reference<data::productclass> dest_productclass_id);
 
 		std::vector<qualified<data::tag>> get_tags();

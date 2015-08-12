@@ -152,6 +152,23 @@ bool process(request& r, response_handler::serializer_ptr& s, karl& k, const uri
 		return true;
 	}
 
+	if(u.match_path(0, "get_productclass"))
+	{
+		if(u.path.size() != 2)
+			return false;
+
+		id_t productclass_id = boost::lexical_cast<id_t>(u.path[1]);
+
+		try
+		{
+			serialize(s, "productclass_summary", k.get_productclass(productclass_id));
+		} catch(storage::not_found_error)
+		{
+			throw api::exception::productclass_not_found;
+		}
+		return true;
+	}
+
 	if(u.match_path(0, "get_product"))
 	{
 		if(u.path.size() != 3)

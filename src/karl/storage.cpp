@@ -35,6 +35,7 @@ enum class statement : uint8_t
 	add_session,
 	get_session_by_token,
 
+	get_productclass,
 	add_productclass,
 	absorb_productclass_product,
 	absorb_productclass_delete_tag_productclass,
@@ -50,6 +51,7 @@ enum class statement : uint8_t
 	add_productlog,
 
 	get_tags,
+	get_tags_by_productclass,
 	add_tag,
 	add_tagalias,
 	get_tagalias_by_name,
@@ -67,6 +69,7 @@ enum class statement : uint8_t
 	get_last_productdetails,
 	get_last_productdetails_by_product,
 	get_last_productdetails_by_name,
+	get_last_productdetails_by_productclass,
 	invalidate_productdetails,
 
 	get_recent_productlog
@@ -498,6 +501,37 @@ std::vector<message::product_log> storage::get_recent_productlog(reference<data:
 	return log;
 }
 
+message::productclass_summary storage::get_productclass(reference<data::productclass> productclass_id)
+{
+	message::productclass_summary result;
+
+	pqxx::work txn(conn);
+	pqxx::result result_productclass = txn.prepared(conv(statement::get_productclass))
+			(productclass_id.unseal()).exec();
+
+	auto pc(read_first_result<data::productclass>(result_productclass));
+	result.name = pc.name;
+
+	pqxx::result result_last_productdetails = txn.prepared(conv(statement::get_last_productdetails_by_productclass))
+			(productclass_id.unseal()).exec();
+
+	for(auto row : result_last_productdetails)
+	{
+		auto p(read_result<data::product>(row));
+		auto pd(read_result<data::productdetails>(row));
+
+		result.products.emplace_back(merge(p, pd));
+	}
+
+	pqxx::result result_tags = txn.prepared(conv(statement::get_tags_by_productclass))
+			(productclass_id.unseal()).exec();
+
+	for(auto row : result_tags)
+		result.tags.emplace_back(read_result<qualified<data::tag>>(row));
+
+	return result;
+}
+
 void storage::absorb_productclass(reference<data::productclass> src_productclass_id, reference<data::productclass> dest_productclass_id)
 {
 	pqxx::work txn(conn);
@@ -711,6 +745,7 @@ void storage::prepare_statements()
 	PREPARE_STATEMENT(add_session)
 	PREPARE_STATEMENT(get_session_by_token)
 
+	PREPARE_STATEMENT(get_productclass)
 	PREPARE_STATEMENT(add_productclass)
 	PREPARE_STATEMENT(absorb_productclass_product)
 	PREPARE_STATEMENT(absorb_productclass_delete_tag_productclass)
@@ -722,6 +757,7 @@ void storage::prepare_statements()
 	PREPARE_STATEMENT(get_product_by_identifier)
 
 	PREPARE_STATEMENT(get_tags)
+	PREPARE_STATEMENT(get_tags_by_productclass)
 	PREPARE_STATEMENT(add_tag)
 	PREPARE_STATEMENT(add_tagalias)
 	PREPARE_STATEMENT(get_tagalias_by_name)
@@ -743,6 +779,7 @@ void storage::prepare_statements()
 	PREPARE_STATEMENT(get_last_productdetails)
 	PREPARE_STATEMENT(get_last_productdetails_by_product)
 	PREPARE_STATEMENT(get_last_productdetails_by_name)
+	PREPARE_STATEMENT(get_last_productdetails_by_productclass)
 	PREPARE_STATEMENT(invalidate_productdetails)
 
 	PREPARE_STATEMENT(get_recent_productlog)

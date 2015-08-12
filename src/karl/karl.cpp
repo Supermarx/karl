@@ -166,6 +166,16 @@ namespace supermarx {
 		backend.bind_tag(productclass_id, tag_id);
 	}
 
+	message::productclass_summary karl::get_productclass(reference<data::productclass> productclass_id)
+	{
+		return backend.get_productclass(productclass_id);
+	}
+
+	void karl::absorb_productclass(reference<data::productclass> src_productclass_id, reference<data::productclass> dest_productclass_id)
+	{
+		backend.absorb_productclass(src_productclass_id, dest_productclass_id);
+	}
+
 	void karl::test()
 	{
 		id_t base_supermarket = 1;

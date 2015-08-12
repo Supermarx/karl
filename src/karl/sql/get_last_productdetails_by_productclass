@@ -1,0 +1,21 @@
+select
+	product.identifier,
+	product.supermarket_id,
+	product.imagecitation_id,
+	product.productclass_id,
+	product.name,
+	product.volume,
+	product.volume_measure,
+	productdetails.product_id,
+	productdetails.orig_price,
+	productdetails.price,
+	productdetails.discount_amount,
+	productdetails.valid_on,
+	productdetails.valid_until,
+	productdetails.retrieved_on
+from
+	product
+		inner join productdetails on (product.id = productdetails.product_id)
+where
+	product.productclass_id = $1 and
+	productdetails.valid_until is null

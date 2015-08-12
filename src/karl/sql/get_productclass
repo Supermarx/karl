@@ -1,0 +1,7 @@
+select
+	productclass.id,
+	productclass.name
+from
+	productclass
+where
+	productclass.id = $1
