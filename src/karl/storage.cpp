@@ -173,6 +173,7 @@ inline static message::product_summary merge(data::product const& p, data::produ
 {
 	return message::product_summary({
 		p.identifier,
+		p.supermarket_id,
 		p.name,
 		p.productclass_id,
 		p.volume,
