@@ -5,4 +5,5 @@ select
 from
 	tagalias
 where
-	lower(tagalias.name) = lower($1)
+	tagalias.tagcategory_id = $1 and
+	lower(tagalias.name) = lower($2)

@@ -54,7 +54,7 @@ enum class statement : uint8_t
 	get_tags_by_productclass,
 	add_tag,
 	add_tagalias,
-	get_tagalias_by_name,
+	get_tagalias_by_tagcategory_name,
 	add_tagcategory,
 	add_tagcategoryalias,
 	get_tagcategoryalias_by_name,
@@ -579,14 +579,15 @@ reference<data::tag> storage::find_add_tag(std::string const& name, reference<da
 {
 	pqxx::work txn(conn);
 
-	pqxx::result result_tagalias = txn.prepared(conv(statement::get_tagalias_by_name))
+	pqxx::result result_tagalias = txn.prepared(conv(statement::get_tagalias_by_tagcategory_name))
+			(tagcategory_id.unseal())
 			(name).exec();
 
 	if(result_tagalias.size() > 0)
 		return reference<data::tag>(read_id(result_tagalias, "tag_id"));
 
 	reference<data::tag> tag_id(write_with_id(txn, statement::add_tag, data::tag({boost::none, tagcategory_id, name})));
-	write(txn, statement::add_tagalias, data::tagalias({tag_id, name}));
+	write(txn, statement::add_tagalias, data::tagalias({tag_id, tagcategory_id, name}));
 
 	txn.commit();
 
@@ -761,7 +762,7 @@ void storage::prepare_statements()
 	PREPARE_STATEMENT(get_tags_by_productclass)
 	PREPARE_STATEMENT(add_tag)
 	PREPARE_STATEMENT(add_tagalias)
-	PREPARE_STATEMENT(get_tagalias_by_name)
+	PREPARE_STATEMENT(get_tagalias_by_tagcategory_name)
 	PREPARE_STATEMENT(add_tagcategory)
 	PREPARE_STATEMENT(add_tagcategoryalias)
 	PREPARE_STATEMENT(get_tagcategoryalias_by_name)

@@ -1,2 +1,36 @@
 alter table tag
 	alter column tagcategory_id set not null;
+
+alter table tagalias
+	add column tagcategory_id integer references tagcategory(id),
+	add column t_name varchar;
+
+update tagalias
+set
+	t_name = ta.name
+from
+	tagalias as ta
+where
+	tagalias.id = ta.id;
+
+alter table tagalias
+	drop column name;
+alter table tagalias
+	rename column t_name to name;
+
+update tagalias
+set
+	tagcategory_id = tag.tagcategory_id
+from
+	tag
+where
+	tag.id = tagalias.tag_id;
+
+alter table tagalias
+	alter column name set not null,
+	alter column tagcategory_id set not null;
+
+create unique index tagalias_tagcategory_namex on tagalias(tagcategory_id, (lower(name)));
+create unique index tag_tagcategory_namex on tag(tagcategory_id, (lower(name)));
+
+drop index tag_namex;
