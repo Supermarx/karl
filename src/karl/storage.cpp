@@ -575,7 +575,7 @@ reference<data::tagcategory> storage::find_add_tagcategory(std::string const& na
 	return tagcategory_id;
 }
 
-reference<data::tag> storage::find_add_tag(std::string const& name, boost::optional<reference<data::tagcategory>> tagcategory_id)
+reference<data::tag> storage::find_add_tag(std::string const& name, reference<data::tagcategory> tagcategory_id)
 {
 	pqxx::work txn(conn);
 
@@ -668,8 +668,9 @@ void storage::update_database_schema()
 	ADD_SCHEMA(9);
 	ADD_SCHEMA(10);
 	ADD_SCHEMA(11);
+	ADD_SCHEMA(12);
 
-	const size_t target_schema_version = 11;
+	const size_t target_schema_version = 12;
 
 	unsigned int schema_version = 0;
 	try

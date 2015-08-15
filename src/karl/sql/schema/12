@@ -1,0 +1,2 @@
+alter table tag
+	alter column tagcategory_id set not null;

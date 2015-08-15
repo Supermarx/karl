@@ -152,13 +152,8 @@ namespace supermarx {
 
 	reference<data::tag> karl::find_add_tag(message::tag const& t)
 	{
-		if(t.category)
-		{
-			reference<data::tagcategory> tc_id(backend.find_add_tagcategory(*t.category));
-			return backend.find_add_tag(t.name, tc_id);
-		}
-		else
-			return backend.find_add_tag(t.name);
+		reference<data::tagcategory> tc_id(backend.find_add_tagcategory(t.category));
+		return backend.find_add_tag(t.name, tc_id);
 	}
 
 	void karl::bind_tag(reference<data::productclass> productclass_id, reference<data::tag> tag_id)
