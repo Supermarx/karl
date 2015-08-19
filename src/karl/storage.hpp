@@ -49,6 +49,8 @@ public:
 	storage(std::string const& host, std::string const& user, std::string const& password, const std::string& db);
 	~storage();
 
+	void check_integrity();
+
 	reference<data::karluser> add_karluser(data::karluser const& user);
 	qualified<data::karluser> get_karluser(reference<data::karluser> karluser_id);
 	qualified<data::karluser> get_karluser_by_name(std::string const& name);
@@ -74,6 +76,7 @@ public:
 
 	std::vector<qualified<data::tag>> get_tags();
 	void bind_tag(reference<data::productclass> productclass_id, reference<data::tag> tag_id);
+	void update_tag_set_parent(reference<data::tag> tag_id, boost::optional<reference<data::tag>> parent_tag_id = boost::none);
 	void absorb_tagcategory(reference<data::tagcategory> src_tagcategory_id, reference<data::tagcategory> dest_tagcategory_id);
 	void absorb_tag(reference<data::tag> src_tag_id, reference<data::tag> dest_tag_id);
 

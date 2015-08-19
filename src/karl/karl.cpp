@@ -15,6 +15,12 @@ namespace supermarx {
 		, check_perms(_check_perms)
 	{}
 
+	void karl::check_integrity()
+	{
+		backend.check_integrity();
+		log("karl::check_integrity", log::level_e::NOTICE)() << "Database integrity checked";
+	}
+
 	bool karl::check_permissions() const
 	{
 		return check_perms;
@@ -122,6 +128,13 @@ namespace supermarx {
 	{
 		log("karl::karl", log::level_e::DEBUG)() << "Received product " << ap.p.name << " [" << supermarket_id << "] [" << ap.p.identifier << "]";
 		backend.add_product(supermarket_id, ap);
+
+		message::product_summary ps = backend.get_product(ap.p.identifier, supermarket_id);
+		for(message::tag t : ap.p.tags)
+		{
+			reference<data::tag> tag_id = this->find_add_tag(t);
+			this->bind_tag(ps.productclass_id, tag_id);
+		}
 	}
 
 	void karl::add_product_image_citation(reference<data::supermarket> supermarket_id, const std::string &product_identifier, const std::string &original_uri, const std::string &source_uri, const datetime &retrieved_on, raw const& image)
@@ -159,6 +172,11 @@ namespace supermarx {
 	void karl::bind_tag(reference<data::productclass> productclass_id, reference<data::tag> tag_id)
 	{
 		backend.bind_tag(productclass_id, tag_id);
+	}
+
+	void karl::update_tag_set_parent(reference<data::tag> tag_id, boost::optional<reference<data::tag>> parent_tag_id)
+	{
+		backend.update_tag_set_parent(tag_id, parent_tag_id);
 	}
 
 	message::productclass_summary karl::get_productclass(reference<data::productclass> productclass_id)

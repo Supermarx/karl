@@ -20,6 +20,8 @@ namespace supermarx
 	public:
 		karl(std::string const& host, std::string const& user, std::string const& password, const std::string& db, const std::string& imagecitation_path, bool check_perms);
 
+		void check_integrity();
+
 		bool check_permissions() const;
 
 		void create_user(std::string const& name, std::string const& password);
@@ -41,6 +43,7 @@ namespace supermarx
 		std::vector<qualified<data::tag>> get_tags();
 		reference<data::tag> find_add_tag(message::tag const& t);
 		void bind_tag(reference<data::productclass> productclass_id, reference<data::tag> tag_id);
+		void update_tag_set_parent(reference<data::tag> tag_id, boost::optional<reference<data::tag>> parent_tag_id = boost::none);
 
 		void test();
 

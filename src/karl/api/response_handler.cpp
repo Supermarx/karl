@@ -298,6 +298,27 @@ bool process(request& r, response_handler::serializer_ptr& s, karl& k, const uri
 		return true;
 	}
 
+	if(u.match_path(0, "update_tag_set_parent"))
+	{
+		require_permissions(r, k);
+
+		if(u.path.size() < 2 || u.path.size() > 3)
+			return false;
+
+		reference<data::tag> tag_id = boost::lexical_cast<id_t>(u.path[1]);
+		boost::optional<reference<data::tag>> parent_tag_id;
+
+		if(u.path.size() == 3)
+			parent_tag_id = reference<data::tag>(boost::lexical_cast<id_t>(u.path[2]));
+
+		k.update_tag_set_parent(tag_id, parent_tag_id);
+
+		s->write_object("response", 1);
+		s->write("status", std::string("done"));
+
+		return true;
+	}
+
 	if(u.match_path(0, "create_sessionticket"))
 	{
 		if(u.path.size() != 2)

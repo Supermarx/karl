@@ -1,5 +1,6 @@
 #include <karl/storage.hpp>
 
+#include <stack>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/lexical_cast.hpp>
 
@@ -61,6 +62,7 @@ enum class statement : uint8_t
 	absorb_tag,
 	absorb_tagcategory,
 	bind_tag,
+	update_tag_set_parent,
 
 	add_imagecitation,
 	update_product_image_citation,
@@ -603,12 +605,73 @@ void storage::absorb_tagcategory(reference<data::tagcategory> src_tagcategory_id
 	txn.commit();
 }
 
+void check_tag_consistency(pqxx::transaction_base& txn)
+{
+	pqxx::result result_tags(txn.prepared(conv(statement::get_tags)).exec());
+
+	std::stack<reference<data::tag>> todo;
+	std::set<reference<data::tag>> tag_ids;
+	std::map<reference<data::tag>, std::vector<reference<data::tag>>> tag_tree; //tag_tree[parent] = children
+	for(pqxx::tuple const& tup : result_tags)
+	{
+		qualified<data::tag> tag = read_result<qualified<data::tag>>(tup);
+
+		tag_ids.emplace(tag.id);
+		if(tag.data.parent_id)
+		{
+			auto tree_it = tag_tree.find(*tag.data.parent_id);
+			if(tree_it == std::end(tag_tree))
+				tag_tree.emplace(*tag.data.parent_id, std::vector<reference<data::tag>>({ tag.id }));
+			else
+				tree_it->second.emplace_back(tag.id);
+		}
+		else
+			todo.push(tag.id);
+	}
+
+	std::set<reference<data::tag>> visited;
+	while(!todo.empty())
+	{
+		reference<data::tag> tag_id = todo.top();
+		todo.pop();
+
+		if(!visited.emplace(tag_id).second)
+			throw std::runtime_error(std::string("Tag tree is not consistent (cycle detected with id: ") + boost::lexical_cast<std::string>(tag_id.unseal()) + ")");
+
+		for(auto child_tag_id : tag_tree[tag_id])
+			todo.push(child_tag_id);
+	}
+
+	if(visited.size() < tag_ids.size())
+	{
+		std::set<reference<data::tag>> diff;
+		std::set_difference(tag_ids.begin(), tag_ids.end(), visited.begin(), visited.end(), std::inserter(diff, diff.begin()));
+
+		std::stringstream sstr;
+		sstr << "Tag tree is not consistent (closed cycles detected with ids:";
+		for(reference<data::tag> tag_id : diff)
+			sstr << " " << tag_id.unseal();
+		sstr << ")";
+
+		throw std::runtime_error(sstr.str());
+	}
+}
+
+void storage::check_integrity()
+{
+	pqxx::work txn(conn);
+	check_tag_consistency(txn);
+}
+
 void storage::absorb_tag(reference<data::tag> src_tag_id, reference<data::tag> dest_tag_id)
 {
 	pqxx::work txn(conn);
 	txn.prepared(conv(statement::absorb_tag))
 			(src_tag_id.unseal())
 			(dest_tag_id.unseal()).exec();
+
+	check_tag_consistency(txn);
+
 	txn.commit();
 }
 
@@ -631,6 +694,24 @@ void storage::bind_tag(reference<data::productclass> productclass_id, reference<
 	txn.prepared(conv(statement::bind_tag))
 			(tag_id.unseal())
 			(productclass_id.unseal()).exec();
+
+	txn.commit();
+}
+
+void storage::update_tag_set_parent(reference<data::tag> tag_id, boost::optional<reference<data::tag>> parent_tag_id)
+{
+	pqxx::work txn(conn);
+
+	if(parent_tag_id)
+		txn.prepared(conv(statement::update_tag_set_parent))
+				(tag_id.unseal())
+				(parent_tag_id->unseal()).exec();
+	else
+		txn.prepared(conv(statement::update_tag_set_parent))
+				(tag_id.unseal())
+				().exec();
+
+	check_tag_consistency(txn);
 
 	txn.commit();
 }
@@ -769,6 +850,7 @@ void storage::prepare_statements()
 	PREPARE_STATEMENT(absorb_tag)
 	PREPARE_STATEMENT(absorb_tagcategory)
 	PREPARE_STATEMENT(bind_tag)
+	PREPARE_STATEMENT(update_tag_set_parent)
 
 	PREPARE_STATEMENT(add_productdetails)
 	PREPARE_STATEMENT(add_productdetailsrecord)

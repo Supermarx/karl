@@ -103,6 +103,8 @@ public:
 		supermarx::config c(opt.config);
 		supermarx::karl karl(c.db_host, c.db_user, c.db_password, c.db_database, c.ic_path, !opt.no_perms);
 
+		karl.check_integrity();
+
 		if(opt.action == "server")
 		{
 			supermarx::api_server as(karl);

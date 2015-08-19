@@ -1,0 +1,5 @@
+update tag
+set
+	parent_id = $2
+where
+	tag.id = $1
