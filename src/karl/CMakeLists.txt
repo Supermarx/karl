@@ -28,7 +28,7 @@ file(GLOB_RECURSE QUERY_FILES RELATIVE ${CMAKE_CURRENT_LIST_DIR} sql/*)
 xxd_process(Karl_SQL "${CMAKE_CURRENT_BINARY_DIR}/sql.cc" "${QUERY_FILES}" "supermarx")
 include_directories(${CMAKE_CURRENT_BINARY_DIR}) # Include directory where Karl_SQL is generated
 
-add_library(karlcore karl.cpp storage.cpp config.cpp util/log.cpp image_citations.cpp ${Karl_SQL})
+add_library(karlcore karl.cpp storage/storage.cpp config.cpp util/log.cpp image_citations.cpp ${Karl_SQL})
 target_link_libraries(karlcore
 	${pqxx_LIBRARIES}
 	${yaml-cpp_LIBRARIES}

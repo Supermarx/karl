@@ -7,7 +7,7 @@
 #include <supermarx/message/add_product.hpp>
 #include <supermarx/message/session.hpp>
 
-#include <karl/storage.hpp>
+#include <karl/storage/storage.hpp>
 #include <karl/image_citations.hpp>
 
 namespace supermarx
