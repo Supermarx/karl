@@ -216,6 +216,7 @@ message::product_history storage::get_product_history(std::string const& identif
 		qb.add_fields<qualified<data::productdetails>>("productdetails");
 		qb.add_join("productdetailsrecord", {{"productdetails.id", "productdetailsrecord.productdetails_id"}});
 		qb.add_cond("productdetails.product_id");
+		qb.add_order_by({"productdetailsrecord.id", true});
 		return qb.select_str();
 	})();
 

@@ -81,12 +81,19 @@ public:
 		std::vector<condition_t> conditions;
 	};
 
+	struct order_by_t
+	{
+		std::string column;
+		bool ascending;
+	};
+
 private:
 	std::string table;
 	std::vector<std::string> fields;
 	std::vector<assignment_t> assignments;
 	std::vector<join_clause_t> joins;
 	std::vector<condition_t> conds;
+	std::vector<order_by_t> order_bys;
 
 	size_t arg_i;
 
@@ -139,6 +146,7 @@ public:
 		, assignments()
 		, joins()
 		, conds()
+		, order_bys()
 		, arg_i(1)
 	{}
 
@@ -197,6 +205,11 @@ public:
 			conds.emplace_back(cond.x, fresh_arg_str(), cond.c);
 	}
 
+	void add_order_by(order_by_t const& x)
+	{
+		order_bys.emplace_back(x);
+	}
+
 	std::string select_str(bool distinct = false) const
 	{
 		std::stringstream sstr;
@@ -209,16 +222,18 @@ public:
 		else
 			sstr << "select" << std::endl;
 
-		bool first = true;
-		for(std::string const& field : fields)
 		{
-			if(first)
-				first = false;
-			else
-				sstr << ", ";
-			sstr << field;
+			bool first = true;
+			for(std::string const& field : fields)
+			{
+				if(first)
+					first = false;
+				else
+					sstr << ", ";
+				sstr << field;
+			}
+			sstr << std::endl;
 		}
-		sstr << std::endl;
 
 		sstr << "from " << table << std::endl;
 
@@ -233,6 +248,27 @@ public:
 
 		write_conditions(conds, sstr);
 
+		if(!order_bys.empty())
+		{
+			sstr << "order by ";
+
+			bool first = true;
+			for(order_by_t const& order_by : order_bys)
+			{
+				if(first)
+					first = false;
+				else
+					sstr << ", ";
+
+				sstr << order_by.column;
+
+				if(order_by.ascending)
+					sstr << " asc";
+				else
+					sstr << " desc";
+			}
+		}
+
 		return sstr.str();
 	}
 
@@ -245,6 +281,9 @@ public:
 
 		if(!joins.empty())
 			throw std::logic_error(warning_str("joins", "insert"));
+
+		if(!order_bys.empty())
+			throw std::logic_error(warning_str("order_bys", "insert"));
 
 		sstr << "insert into " << table << " (";
 		{
@@ -288,6 +327,9 @@ public:
 		if(!joins.empty())
 			throw std::logic_error(warning_str("joins", "update"));
 
+		if(!order_bys.empty())
+			throw std::logic_error(warning_str("order_bys", "update"));
+
 		sstr << "update " << table << std::endl;
 		sstr << "set" << std::endl;
 
@@ -323,6 +365,9 @@ public:
 
 		if(!joins.empty())
 			throw std::logic_error(warning_str("joins", "delete"));
+
+		if(!order_bys.empty())
+			throw std::logic_error(warning_str("order_bys", "delete"));
 
 		sstr << "delete " << table << std::endl;
 		sstr << "where" << std::endl;
