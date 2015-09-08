@@ -69,6 +69,22 @@ public:
 		{}
 	};
 
+	struct field_t
+	{
+		std::string column;
+		boost::optional<std::string> as_name;
+
+		field_t(std::string const& _column)
+			: column(_column)
+			, as_name()
+		{}
+
+		field_t(std::string const& _column, std::string const& _as_name)
+			: column(_column)
+			, as_name(_as_name)
+		{}
+	};
+
 	struct assignment_t
 	{
 		std::string column;
@@ -89,7 +105,7 @@ public:
 
 private:
 	std::string table;
-	std::vector<std::string> fields;
+	std::vector<field_t> fields;
 	std::vector<assignment_t> assignments;
 	std::vector<join_clause_t> joins;
 	std::vector<condition_t> conds;
@@ -165,6 +181,12 @@ public:
 		fields.insert(fields.end(), _fields.begin(), _fields.end());
 	}
 
+	template<typename... Args>
+	void add_field(Args&&... args)
+	{
+		fields.emplace_back<Args...>(args...);
+	}
+
 	template<typename T>
 	void add_fields()
 	{
@@ -224,13 +246,16 @@ public:
 
 		{
 			bool first = true;
-			for(std::string const& field : fields)
+			for(field_t const& field : fields)
 			{
 				if(first)
 					first = false;
 				else
 					sstr << ", ";
-				sstr << field;
+
+				sstr << field.column;
+				if(field.as_name)
+					sstr << " as " << *field.as_name;
 			}
 			sstr << std::endl;
 		}

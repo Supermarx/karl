@@ -211,9 +211,11 @@ message::product_summary storage::get_product(const std::string &identifier, ref
 
 message::product_history storage::get_product_history(std::string const& identifier, reference<data::supermarket> supermarket_id)
 {
-	static std::string q_get_all_productdetails_by_product = ([]() {
+	static std::string q_get_relevant_productdetails_by_product = ([]() {
 		query_builder qb("productdetails");
-		qb.add_fields<qualified<data::productdetails>>("productdetails");
+		qb.add_field("productdetails.price");
+		qb.add_field("productdetails.valid_on");
+		qb.add_field("productdetailsrecord.retrieved_on");
 		qb.add_join("productdetailsrecord", {{"productdetails.id", "productdetailsrecord.productdetails_id"}});
 		qb.add_cond("productdetails.product_id");
 		qb.add_order_by({"productdetailsrecord.id", true});
@@ -230,18 +232,18 @@ message::product_history storage::get_product_history(std::string const& identif
 		{}
 	});
 
-	pqxx::result result = txn.parameterized(q_get_all_productdetails_by_product)
+	pqxx::result result = txn.parameterized(q_get_relevant_productdetails_by_product)
 			(p.id.unseal()).exec();
 
 	for(auto row : result)
 	{
-		auto pd(read_result<data::productdetails>(row));
+		datetime retrieved_on(detail::rcol<datetime>::exec(row, "retrieved_on"));
 
-		datetime valid_on(pd.valid_on);
-		if(valid_on < pd.retrieved_on)
-			valid_on = pd.retrieved_on;
+		datetime valid_on(detail::rcol<datetime>::exec(row, "valid_on"));
+		if(valid_on < retrieved_on)
+			valid_on = retrieved_on;
 
-		history.pricehistory.emplace_back(valid_on, pd.price);
+		history.pricehistory.emplace_back(valid_on, row["price"].as<int>());
 	}
 
 	return history;
