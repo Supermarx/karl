@@ -1,9 +1,0 @@
-select
-	session.id,
-	session.karluser_id,
-	session.token,
-	session.creation
-from
-	session
-where
-	session.token = $1

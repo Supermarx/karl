@@ -1,9 +1,0 @@
-select
-	tagalias.id,
-	tagalias.tag_id,
-	tagalias.name
-from
-	tagalias
-where
-	tagalias.tagcategory_id = $1 and
-	lower(tagalias.name) = lower($2)

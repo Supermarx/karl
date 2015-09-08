@@ -7,16 +7,19 @@ namespace supermarx
 
 reference<data::tagcategory> storage::find_add_tagcategory(std::string const& name)
 {
-	pqxx::work txn(conn);
+	static std::string q_tagcategoryalias_get = query_gen::simple_select<qualified<data::tagcategoryalias>>(
+		"tagcategoryalias",
+		{{"lower(tagcategoryalias.name)", "lower($1)"}}
+	);
 
-	pqxx::result result_tagcategoryalias = txn.prepared(conv(statement::get_tagcategoryalias_by_name))
-			(name).exec();
+	pqxx::work txn(conn);
+	pqxx::result result_tagcategoryalias = txn.parameterized(q_tagcategoryalias_get)(name).exec();
 
 	if(result_tagcategoryalias.size() > 0)
 		return reference<data::tagcategory>(read_id(result_tagcategoryalias, "tagcategory_id"));
 
-	reference<data::tagcategory> tagcategory_id(write_with_id(txn, statement::add_tagcategory, data::tagcategory({name})));
-	write(txn, statement::add_tagcategoryalias, data::tagcategoryalias({tagcategory_id, name}));
+	reference<data::tagcategory> tagcategory_id(write_with_id<data::tagcategory>(txn, {name}));
+	write<data::tagcategoryalias>(txn, {tagcategory_id, name});
 
 	txn.commit();
 
@@ -25,17 +28,21 @@ reference<data::tagcategory> storage::find_add_tagcategory(std::string const& na
 
 reference<data::tag> storage::find_add_tag(std::string const& name, reference<data::tagcategory> tagcategory_id)
 {
-	pqxx::work txn(conn);
+	static std::string q_tagalias_get = query_gen::simple_select<qualified<data::tagalias>>(
+		"tagalias",
+		{{"tagalias.tagcategory_id", "$1"}, {"lower(tagalias.name)", "lower($2)"}}
+	);
 
-	pqxx::result result_tagalias = txn.prepared(conv(statement::get_tagalias_by_tagcategory_name))
+	pqxx::work txn(conn);
+	pqxx::result result_tagalias = txn.parameterized(q_tagalias_get)
 			(tagcategory_id.unseal())
 			(name).exec();
 
 	if(result_tagalias.size() > 0)
 		return reference<data::tag>(read_id(result_tagalias, "tag_id"));
 
-	reference<data::tag> tag_id(write_with_id(txn, statement::add_tag, data::tag({boost::none, tagcategory_id, name})));
-	write(txn, statement::add_tagalias, data::tagalias({tag_id, tagcategory_id, name}));
+	reference<data::tag> tag_id(write_with_id(txn, data::tag({boost::none, tagcategory_id, name})));
+	write(txn, data::tagalias({tag_id, tagcategory_id, name}));
 
 	txn.commit();
 
@@ -53,7 +60,8 @@ void storage::absorb_tagcategory(reference<data::tagcategory> src_tagcategory_id
 
 void check_tag_consistency(pqxx::transaction_base& txn)
 {
-	pqxx::result result_tags(txn.prepared(conv(statement::get_tags)).exec());
+	static std::string q_tags = query_gen::simple_select<qualified<data::tag>>("tag");
+	pqxx::result result_tags(txn.exec(q_tags));
 
 	std::stack<reference<data::tag>> todo;
 	std::set<reference<data::tag>> tag_ids;
@@ -118,7 +126,9 @@ void storage::absorb_tag(reference<data::tag> src_tag_id, reference<data::tag> d
 std::vector<qualified<data::tag>> storage::get_tags()
 {
 	pqxx::work txn(conn);
-	pqxx::result result_tags(txn.prepared(conv(statement::get_tags)).exec());
+
+	static std::string q = query_gen::simple_select<qualified<data::tag>>("tag");
+	pqxx::result result_tags(txn.exec(q));
 
 	std::vector<qualified<data::tag>> result;
 	for(pqxx::tuple const& tup : result_tags)

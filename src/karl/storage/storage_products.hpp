@@ -24,9 +24,23 @@ inline static message::product_summary merge(data::product const& p, data::produ
 	});
 }
 
+inline static query_builder last_productdetails()
+{
+	query_builder qb("product");
+	qb.add_join("productdetails", { query_builder::condition_t("product.id", "productdetails.product_id") });
+
+	qb.add_fields<data::product>("product");
+	qb.add_fields<qualified<data::productdetails>>("productdetails");
+
+	qb.add_cond("productdetails.valid_until", "null", query_builder::comp_e::IS);
+	return qb;
+}
+
 qualified<data::product> find_product_unsafe(pqxx::transaction_base& txn, reference<data::supermarket> supermarket_id, std::string const& identifier)
 {
-	pqxx::result result = txn.prepared(conv(statement::get_product_by_identifier))
+	static std::string q = query_gen::simple_select<qualified<data::product>>("product", {{"product.identifier"}, {"product.supermarket_id"}});
+
+	pqxx::result result = txn.parameterized(q)
 			(identifier)
 			(supermarket_id.unseal()).exec();
 
@@ -35,7 +49,13 @@ qualified<data::product> find_product_unsafe(pqxx::transaction_base& txn, refere
 
 qualified<data::productdetails> fetch_last_productdetails_unsafe(pqxx::transaction_base& txn, reference<data::product> product_id)
 {
-	pqxx::result result = txn.prepared(conv(statement::get_last_productdetails_by_product))
+	static std::string q = ([]() {
+		query_builder qb(last_productdetails());
+		qb.add_cond("productdetails.product_id");
+		return qb.select_str();
+	})();
+
+	pqxx::result result = txn.parameterized(q)
 			(product_id.unseal()).exec();
 	return read_first_result<qualified<data::productdetails>>(result);
 }
@@ -63,10 +83,7 @@ qualified<data::product> find_add_product(pqxx::connection& conn, reference<data
 		} catch(storage::not_found_error)
 		{}
 
-		reference<data::productclass> productclass_id(
-			write_with_id(txn, statement::add_productclass, data::productclass({
-				pb.name
-		})));
+		reference<data::productclass> productclass_id(write_with_id(txn, data::productclass({pb.name})));
 
 		data::product p({
 			pb.identifier,
@@ -78,7 +95,7 @@ qualified<data::product> find_add_product(pqxx::connection& conn, reference<data
 			pb.volume_measure
 		});
 
-		reference<data::product> product_id(write_with_id(txn, statement::add_product, p));
+		reference<data::product> product_id(write_with_id(txn, p));
 		txn.commit();
 
 		return qualified<data::product>(product_id, p);
@@ -87,10 +104,10 @@ qualified<data::product> find_add_product(pqxx::connection& conn, reference<data
 
 void register_productdetailsrecord(pqxx::transaction_base& txn, data::productdetailsrecord const& pdr, std::vector<std::string> const& problems)
 {
-	reference<data::productdetailsrecord> pdn_id(write_with_id(txn, statement::add_productdetailsrecord, pdr));
+	reference<data::productdetailsrecord> pdn_id(write_with_id(txn, pdr));
 
 	for(std::string const& p_str : problems)
-		write(txn, statement::add_productlog, data::productlog({pdn_id, p_str}));
+		write(txn, data::productlog({pdn_id, p_str}));
 }
 
 void storage::add_product(reference<data::supermarket> supermarket_id, message::add_product const& ap_new)
@@ -161,7 +178,7 @@ void storage::add_product(reference<data::supermarket> supermarket_id, message::
 		ap_new.retrieved_on
 	});
 
-	reference<data::productdetails> productdetails_id(write_with_id(txn, statement::add_productdetails, pd_new));
+	reference<data::productdetails> productdetails_id(write_with_id(txn, pd_new));
 	log("storage::storage", log::level_e::NOTICE)() << "Inserted new productdetails " << productdetails_id << " for product " << p_new.identifier << " [" << p_canonical.id << ']';
 
 	data::productdetailsrecord pdr({
@@ -194,6 +211,14 @@ message::product_summary storage::get_product(const std::string &identifier, ref
 
 message::product_history storage::get_product_history(std::string const& identifier, reference<data::supermarket> supermarket_id)
 {
+	static std::string q_get_all_productdetails_by_product = ([]() {
+		query_builder qb("productdetails");
+		qb.add_fields<qualified<data::productdetails>>("productdetails");
+		qb.add_join("productdetailsrecord", {{"productdetails.id", "productdetailsrecord.productdetails_id"}});
+		qb.add_cond("productdetails.product_id");
+		return qb.select_str();
+	})();
+
 	pqxx::work txn(conn);
 
 	qualified<data::product> p(find_product_unsafe(txn, supermarket_id, identifier));
@@ -204,7 +229,7 @@ message::product_history storage::get_product_history(std::string const& identif
 		{}
 	});
 
-	pqxx::result result = txn.prepared(conv(statement::get_all_productdetails_by_product))
+	pqxx::result result = txn.parameterized(q_get_all_productdetails_by_product)
 			(p.id.unseal()).exec();
 
 	for(auto row : result)
@@ -223,9 +248,14 @@ message::product_history storage::get_product_history(std::string const& identif
 
 std::vector<message::product_summary> storage::get_products(reference<data::supermarket> supermarket_id)
 {
-	pqxx::work txn(conn);
+	static std::string q = ([]() {
+		query_builder qb(last_productdetails());
+		qb.add_cond("product.supermarket_id");
+		return qb.select_str();
+	})();
 
-	pqxx::result result = txn.prepared(conv(statement::get_last_productdetails))
+	pqxx::work txn(conn);
+	pqxx::result result = txn.parameterized(q)
 			(supermarket_id.unseal()).exec();
 
 	std::vector<message::product_summary> products;
@@ -242,10 +272,16 @@ std::vector<message::product_summary> storage::get_products(reference<data::supe
 
 std::vector<message::product_summary> storage::get_products_by_name(std::string const& name, reference<data::supermarket> supermarket_id)
 {
-	pqxx::work txn(conn);
+	static std::string q = ([]() {
+		query_builder qb(last_productdetails());
+		qb.add_cond("lower(product.name)", query_builder::comp_e::LIKE);
+		qb.add_cond("product.supermarket_id");
+		return qb.select_str();
+	})();
 
-	pqxx::result result = txn.prepared(conv(statement::get_last_productdetails_by_name))
-			(std::string("%") + name + "%")
+	pqxx::work txn(conn);
+	pqxx::result result = txn.parameterized(q)
+			(std::string("%") + txn.esc(name) + "%")
 			(supermarket_id.unseal()).exec();
 
 	std::vector<message::product_summary> products;
@@ -264,7 +300,23 @@ std::vector<message::product_log> storage::get_recent_productlog(reference<data:
 {
 	pqxx::work txn(conn);
 
-	pqxx::result result = txn.prepared(conv(statement::get_recent_productlog))
+	static std::string q = ([](){
+		query_builder qb("product");
+
+		qb.add_join("productdetails", {{"productdetails.product_id", "product.id"}});
+		qb.add_join("productdetailsrecord", {{"productdetailsrecord.productdetails_id", "productdetails.id"}});
+		qb.add_join("productlog", {{"productlog.productdetailsrecord_id", "productdetailsrecord.id"}});
+
+		qb.add_fields({"product.identifier", "product.name", "productlog.description", "productdetailsrecord.retrieved_on"});
+
+		qb.add_cond("product.supermarket_id");
+		qb.add_cond("productdetails.valid_until", "null", query_builder::comp_e::IS);
+		qb.add_cond("productdetailsrecord.id", "(select max(pdr2.id) from productdetailsrecord as pdr2 group by pdr2.productdetails_id)", query_builder::comp_e::IN);
+
+		return qb.select_str(true);
+	})();
+
+	pqxx::result result = txn.parameterized(q)
 			(supermarket_id.unseal()).exec();
 
 	std::map<std::string, message::product_log> log_map;
@@ -302,14 +354,29 @@ message::productclass_summary storage::get_productclass(reference<data::productc
 {
 	message::productclass_summary result;
 
+	static std::string q_productclass = query_gen::simple_select<data::productclass>("productclass", {{"productclass"}});
+	static std::string q_last_productdetails = ([]() {
+		query_builder qb(last_productdetails());
+		qb.add_cond("product.productclass_id");
+		return qb.select_str();
+	})();
+	static std::string q_tags = ([]() {
+		query_builder qb("tag");
+		qb.add_join("tag_productclass", { query_builder::condition_t("tag.id", "tag_productclass.tag_id") });
+		qb.add_fields<data::tag>("tag");
+		qb.add_cond("tag_productclass.productclass_id");
+
+		return qb.select_str();
+	})();
+
 	pqxx::work txn(conn);
-	pqxx::result result_productclass = txn.prepared(conv(statement::get_productclass))
+	pqxx::result result_productclass = txn.parameterized(q_productclass)
 			(productclass_id.unseal()).exec();
 
 	auto pc(read_first_result<data::productclass>(result_productclass));
 	result.name = pc.name;
 
-	pqxx::result result_last_productdetails = txn.prepared(conv(statement::get_last_productdetails_by_productclass))
+	pqxx::result result_last_productdetails = txn.parameterized(q_last_productdetails)
 			(productclass_id.unseal()).exec();
 
 	for(auto row : result_last_productdetails)
@@ -320,7 +387,7 @@ message::productclass_summary storage::get_productclass(reference<data::productc
 		result.products.emplace_back(merge(p, pd));
 	}
 
-	pqxx::result result_tags = txn.prepared(conv(statement::get_tags_by_productclass))
+	pqxx::result result_tags = txn.parameterized(q_tags)
 			(productclass_id.unseal()).exec();
 
 	for(auto row : result_tags)

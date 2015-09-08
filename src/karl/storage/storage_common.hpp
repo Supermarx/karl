@@ -19,60 +19,28 @@
 
 #include "sql.cc"
 
+#include <karl/storage/query_gen.hpp>
+#include <karl/storage/table_repository.hpp>
+
 namespace supermarx
 {
 
 enum class statement : uint8_t
 {
-	add_karluser,
-	get_karluser,
-	get_karluser_by_name,
-
-	add_sessionticket,
-	get_sessionticket,
-
-	add_session,
-	get_session_by_token,
-
-	get_productclass,
-	add_productclass,
 	absorb_productclass_product,
 	absorb_productclass_delete_tag_productclass,
 	absorb_productclass_tag_productclass,
 	absorb_productclass_delete,
 
-	add_product,
 	update_product,
-	get_product_by_identifier,
-
-	add_productdetails,
-	add_productdetailsrecord,
-	add_productlog,
-
-	get_tags,
-	get_tags_by_productclass,
-	add_tag,
-	add_tagalias,
-	get_tagalias_by_tagcategory_name,
-	add_tagcategory,
-	add_tagcategoryalias,
-	get_tagcategoryalias_by_name,
 	absorb_tag,
 	absorb_tagcategory,
 	bind_tag,
 	update_tag_set_parent,
 
-	add_imagecitation,
 	update_product_image_citation,
 
-	get_all_productdetails_by_product,
-	get_last_productdetails,
-	get_last_productdetails_by_product,
-	get_last_productdetails_by_name,
-	get_last_productdetails_by_productclass,
 	invalidate_productdetails,
-
-	get_recent_productlog
 };
 
 inline std::string conv(statement rhs)
@@ -105,6 +73,14 @@ static inline T fetch_simple_first(pqxx::connection& conn, statement stmt, ARG c
 	return read_first_result<T>(result);
 }
 
+template<typename T, typename ARG>
+static inline T fetch_simple_first(pqxx::connection& conn, std::string const& q, ARG const& arg)
+{
+	pqxx::work txn(conn);
+	pqxx::result result(txn.parameterized(q)(arg).exec());
+	return read_first_result<T>(result);
+}
+
 template<typename T, typename U>
 static inline reference<T> fetch_id(pqxx::work& txn, statement stmt, U const& x)
 {
@@ -131,18 +107,37 @@ static inline reference<T> write_with_id(pqxx::transaction_base& txn, statement 
 }
 
 template<typename T>
-static inline pqxx::result write_simple(pqxx::connection& conn, statement stmt, T const& x)
+static inline reference<T> write_with_id(pqxx::transaction_base& txn, T const& x)
+{
+	static std::string q = query_gen::simple_insert_with_id<T>(table_repository::lookup<T>());
+	auto invo(txn.parameterized(q));
+	write_invo<T>(invo, x);
+	pqxx::result result(invo.exec());
+	return reference<T>(read_id(result));
+}
+
+template<typename T>
+static inline pqxx::result write(pqxx::transaction_base& txn, T const& x)
+{
+	static std::string q = query_gen::simple_insert<T>(table_repository::lookup<T>());
+	auto invo(txn.parameterized(q));
+	write_invo<T>(invo, x);
+	return invo.exec();
+}
+
+template<typename T>
+static inline pqxx::result write_simple(pqxx::connection& conn, T const& x)
 {
 	pqxx::work txn(conn);
-	pqxx::result result(write(txn, stmt, x));
+	pqxx::result result(write(txn, x));
 	txn.commit();
 	return result;
 }
 
 template<typename T>
-static inline reference<T> write_simple_with_id(pqxx::connection& conn, statement stmt, T const& x)
+static inline reference<T> write_simple_with_id(pqxx::connection& conn, T const& x)
 {
-	pqxx::result result(write_simple(conn, stmt, x));
+	pqxx::result result(write_simple(conn, x));
 	return reference<T>(read_id(result));
 }
 

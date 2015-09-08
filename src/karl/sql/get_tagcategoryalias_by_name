@@ -1,8 +1,0 @@
-select
-	tagcategoryalias.id,
-	tagcategoryalias.tagcategory_id,
-	tagcategoryalias.name
-from
-	tagcategoryalias
-where
-	lower(tagcategoryalias.name) = lower($1)

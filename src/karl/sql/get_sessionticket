@@ -1,9 +1,0 @@
-select
-	sessionticket.id,
-	sessionticket.karluser_id,
-	sessionticket.nonce,
-	sessionticket.creation
-from
-	sessionticket
-where
-	sessionticket.id = $1

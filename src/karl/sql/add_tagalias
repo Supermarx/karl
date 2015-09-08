@@ -1,8 +1,0 @@
-insert into
-	tagalias (
-		tag_id,
-		tagcategory_id,
-		name
-	)
-values ($1, $2, $3)
-returning id

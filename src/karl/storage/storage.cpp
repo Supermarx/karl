@@ -36,7 +36,7 @@ void storage::check_integrity()
 
 reference<data::imagecitation> storage::add_image_citation(data::imagecitation const& ic)
 {
-	return write_simple_with_id(conn, statement::add_imagecitation, ic);
+	return write_simple_with_id(conn, ic);
 }
 
 void storage::update_product_image_citation(const std::string &product_identifier, reference<data::supermarket> supermarket_id, reference<data::imagecitation> imagecitation_id)
@@ -136,55 +136,21 @@ void storage::update_database_schema()
 
 void storage::prepare_statements()
 {
-	PREPARE_STATEMENT(add_karluser)
-	PREPARE_STATEMENT(get_karluser)
-	PREPARE_STATEMENT(get_karluser_by_name)
-
-	PREPARE_STATEMENT(add_sessionticket)
-	PREPARE_STATEMENT(get_sessionticket)
-
-	PREPARE_STATEMENT(add_session)
-	PREPARE_STATEMENT(get_session_by_token)
-
-	PREPARE_STATEMENT(get_productclass)
-	PREPARE_STATEMENT(add_productclass)
 	PREPARE_STATEMENT(absorb_productclass_product)
 	PREPARE_STATEMENT(absorb_productclass_delete_tag_productclass)
 	PREPARE_STATEMENT(absorb_productclass_tag_productclass)
 	PREPARE_STATEMENT(absorb_productclass_delete)
 
-	PREPARE_STATEMENT(add_product)
 	PREPARE_STATEMENT(update_product)
-	PREPARE_STATEMENT(get_product_by_identifier)
 
-	PREPARE_STATEMENT(get_tags)
-	PREPARE_STATEMENT(get_tags_by_productclass)
-	PREPARE_STATEMENT(add_tag)
-	PREPARE_STATEMENT(add_tagalias)
-	PREPARE_STATEMENT(get_tagalias_by_tagcategory_name)
-	PREPARE_STATEMENT(add_tagcategory)
-	PREPARE_STATEMENT(add_tagcategoryalias)
-	PREPARE_STATEMENT(get_tagcategoryalias_by_name)
 	PREPARE_STATEMENT(absorb_tag)
 	PREPARE_STATEMENT(absorb_tagcategory)
 	PREPARE_STATEMENT(bind_tag)
 	PREPARE_STATEMENT(update_tag_set_parent)
 
-	PREPARE_STATEMENT(add_productdetails)
-	PREPARE_STATEMENT(add_productdetailsrecord)
-	PREPARE_STATEMENT(add_productlog)
-
-	PREPARE_STATEMENT(add_imagecitation)
 	PREPARE_STATEMENT(update_product_image_citation);
 
-	PREPARE_STATEMENT(get_all_productdetails_by_product)
-	PREPARE_STATEMENT(get_last_productdetails)
-	PREPARE_STATEMENT(get_last_productdetails_by_product)
-	PREPARE_STATEMENT(get_last_productdetails_by_name)
-	PREPARE_STATEMENT(get_last_productdetails_by_productclass)
 	PREPARE_STATEMENT(invalidate_productdetails)
-
-	PREPARE_STATEMENT(get_recent_productlog)
 }
 
 #undef PREPARE_STATEMENT
