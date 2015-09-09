@@ -137,8 +137,10 @@ static inline pqxx::result write_simple(pqxx::connection& conn, T const& x)
 template<typename T>
 static inline reference<T> write_simple_with_id(pqxx::connection& conn, T const& x)
 {
-	pqxx::result result(write_simple(conn, x));
-	return reference<T>(read_id(result));
+	pqxx::work txn(conn);
+	reference<T> result(write_with_id(txn, x));
+	txn.commit();
+	return result;
 }
 
 void lock_products_read(pqxx::transaction_base& txn)
