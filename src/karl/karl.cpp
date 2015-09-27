@@ -174,6 +174,11 @@ namespace supermarx {
 		backend.bind_tag(productclass_id, tag_id);
 	}
 
+	void karl::update_tag(reference<data::tag> tag_id, data::tag const& tag)
+	{
+		backend.update_tag(tag_id, tag);
+	}
+
 	void karl::update_tag_set_parent(reference<data::tag> tag_id, boost::optional<reference<data::tag>> parent_tag_id)
 	{
 		backend.update_tag_set_parent(tag_id, parent_tag_id);

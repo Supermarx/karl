@@ -148,6 +148,18 @@ void storage::bind_tag(reference<data::productclass> productclass_id, reference<
 	txn.commit();
 }
 
+void storage::update_tag(reference<data::tag> tag_id, data::tag const& tag)
+{
+	pqxx::work txn(conn);
+
+	if(!update_simple<data::tag>(txn, tag_id, tag))
+		throw not_found_error();
+
+	check_tag_consistency(txn);
+
+	txn.commit();
+}
+
 void storage::update_tag_set_parent(reference<data::tag> tag_id, boost::optional<reference<data::tag>> parent_tag_id)
 {
 	pqxx::work txn(conn);

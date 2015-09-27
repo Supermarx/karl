@@ -143,6 +143,17 @@ static inline reference<T> write_simple_with_id(pqxx::connection& conn, T const&
 	return result;
 }
 
+template<typename T>
+static inline bool update_simple(pqxx::transaction_base& txn, reference<T> const& id, T const& x)
+{
+	static std::string q = query_gen::simple_update<T>(table_repository::lookup<T>());
+	auto invo(txn.parameterized(q));
+	write_invo<T>(invo, x);
+	invo(id.unseal()); // Write id condition
+	pqxx::result result(invo.exec());
+	return (result.affected_rows() > 0);
+}
+
 void lock_products_read(pqxx::transaction_base& txn)
 {
 	txn.exec("lock table product in access share mode");

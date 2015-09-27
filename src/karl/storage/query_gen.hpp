@@ -434,6 +434,17 @@ public:
 		return simple_insert<T>(table) + " returning id";
 	}
 
+	template<typename T>
+	static inline std::string simple_update(std::string const& table)
+	{
+		query_builder qb(table);
+
+		qb.add_assignments<T>();
+		qb.add_cond(table+".id");
+
+		return qb.update_str();
+	}
+
 private:
 	query_gen() = delete;
 	query_gen& operator=(query_gen) = delete;

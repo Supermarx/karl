@@ -76,9 +76,10 @@ public:
 
 	std::vector<qualified<data::tag>> get_tags();
 	void bind_tag(reference<data::productclass> productclass_id, reference<data::tag> tag_id);
-	void update_tag_set_parent(reference<data::tag> tag_id, boost::optional<reference<data::tag>> parent_tag_id = boost::none);
 	void absorb_tagcategory(reference<data::tagcategory> src_tagcategory_id, reference<data::tagcategory> dest_tagcategory_id);
 	void absorb_tag(reference<data::tag> src_tag_id, reference<data::tag> dest_tag_id);
+	void update_tag(reference<data::tag> tag_id, data::tag const& tag);
+	void update_tag_set_parent(reference<data::tag> tag_id, boost::optional<reference<data::tag>> parent_tag_id = boost::none);
 
 	reference<data::imagecitation> add_image_citation(data::imagecitation const& imagecitation);
 	void update_product_image_citation(std::string const& product_identifier, reference<data::supermarket> supermarket_id, reference<data::imagecitation> imagecitation_id);

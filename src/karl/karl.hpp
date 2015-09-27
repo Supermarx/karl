@@ -43,6 +43,7 @@ namespace supermarx
 		std::vector<qualified<data::tag>> get_tags();
 		reference<data::tag> find_add_tag(message::tag const& t);
 		void bind_tag(reference<data::productclass> productclass_id, reference<data::tag> tag_id);
+		void update_tag(reference<data::tag> tag_id, data::tag const& tag);
 		void update_tag_set_parent(reference<data::tag> tag_id, boost::optional<reference<data::tag>> parent_tag_id = boost::none);
 
 		void test();
