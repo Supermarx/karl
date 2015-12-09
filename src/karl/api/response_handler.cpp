@@ -27,7 +27,7 @@ namespace supermarx
 
 void init_serializer(request& r, response_handler::serializer_ptr& s)
 {
-	const guard g([&]()
+	auto g(make_guard([&]()
 	{
 		//Fall back to XML
 		if(s == nullptr)
@@ -35,7 +35,7 @@ void init_serializer(request& r, response_handler::serializer_ptr& s)
 			s.reset(new xml_serializer());
 			r.write_header("Content-Type", "application/xml; charset=UTF-8");
 		}
-	});
+	}));
 
 	const auto& format = r.env().gets.find("format");
 	if(format == r.env().gets.end() || format->second == "xml")
